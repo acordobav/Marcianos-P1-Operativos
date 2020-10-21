@@ -54,30 +54,30 @@ Wall* createMap() {
             int num = atoi(value);
 
             switch (num) {
-            case 1:
+            case 1: // Caso en el que se trata de un muro
                 map[i][j] = num;
                 totalWalls += num;
                 break;
-            case 2:
+            case 2: // Caso en el que se trata de la bandera inicial
                 startFlag.x = X_OFFSET + j * BLOCK_SIZE;  // Calculo de la posicion en X
                 startFlag.y = Y_OFFSET + i * BLOCK_SIZE;  // Calculo de la posicion en Y
                 map[i][j] = 0;
                 break;
-            case 3:
+            case 3: // Caso en el que se trata de la bandera final
                 endFlag.x = X_OFFSET + j * BLOCK_SIZE + BLOCK_SIZE;  // Calculo de la posicion en X
                 endFlag.y = Y_OFFSET + i * BLOCK_SIZE;  // Calculo de la posicion en Y
                 map[i][j] = 0;
                 break;
-            default:
+            default: // Caso en el que se trata de un camino
                 map[i][j] = 0;
             }
         }
     }
     flags[0] = startFlag;
     flags[1] = endFlag;
+    
     // Se construye una lista con todos los muros del laberinto
     struct Wall *walls = malloc(sizeof(*walls)*totalWalls);
-    //struct Wall walls[totalWalls];
     wallCounter = 0;
     for (int i = 0; i < rows; i++) {
         for (int j = 0; j < columns; j++) {    
