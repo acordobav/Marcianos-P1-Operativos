@@ -16,18 +16,6 @@ int countWalls(int** map, int rows, int columns);
 Wall* createMap();
 int wallCounter = 0;
 
-/*
-int main() {
-    Wall* walls = createMap();
-
-    for (int i = 0; i < wallCounter; i++) {
-        Wall wall1 = walls[i];
-        printf("x: %d y: %d\n", wall1.x, wall1.y);
-    }
-
-    return 0;
-}*/
-
 /**
  * Funcion para crear una lista con todos los muros del laberinto
 **/
@@ -70,8 +58,8 @@ Wall* createMap() {
         for (int j = 0; j < columns; j++) {    
             if(map[i][j]) { // Verifica si en la casilla se debe colocar un muro
                 struct Wall wallEntity;  // Se crea un nuevo muro
-                wallEntity.x = X_OFFSET + i * BLOCK_SIZE;  // Calculo de la posicion en X
-                wallEntity.y = Y_OFFSET + j * BLOCK_SIZE;  // Calculo de la posicion en Ys
+                wallEntity.x = X_OFFSET + j * BLOCK_SIZE;  // Calculo de la posicion en X
+                wallEntity.y = Y_OFFSET + i * BLOCK_SIZE;  // Calculo de la posicion en Ys
                 walls[wallCounter] = wallEntity;  // Alcenamiento en una lista de muros
                 wallCounter++;  // Aumentar contador de muros
             }
