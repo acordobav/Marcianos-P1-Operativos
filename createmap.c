@@ -6,6 +6,9 @@
 #define Y_OFFSET 30
 #define BLOCK_SIZE 30
 
+struct Flag{
+    int x, y;
+};
 struct Wall{
     int x, y;  // Posicion en los ejes "x" y "y"
 };
@@ -15,7 +18,7 @@ char* readFile(char* filename);
 int countWalls(int** map, int rows, int columns);
 Wall* createMap();
 int wallCounter = 0;
-
+struct Flag *flags;
 /**
  * Funcion para crear una lista con todos los muros del laberinto
 **/
@@ -40,16 +43,38 @@ Wall* createMap() {
     int map[rows][columns];
     int totalWalls = 0; // Numero total de muros en el laberinto
 
+    flags = malloc(sizeof(*flags)*2);
+    struct Flag startFlag;
+    struct Flag endFlag;
     // Construccion de una matriz donde un 1 es un muro y un 0 es un camino
     for (int i = 0; i < rows; i++) {
         token = strtok(NULL, "\n");    // Se obtiene una fila del archivo
         for (int j = 0; j < columns; j++) {    
             value[0] = token[j];
             int num = atoi(value);
-            map[i][j] = num;
-            totalWalls += num;
+
+            switch (num) {
+            case 1:
+                map[i][j] = num;
+                totalWalls += num;
+                break;
+            case 2:
+                startFlag.x = X_OFFSET + j * BLOCK_SIZE;  // Calculo de la posicion en X
+                startFlag.y = Y_OFFSET + i * BLOCK_SIZE;  // Calculo de la posicion en Y
+                map[i][j] = 0;
+                break;
+            case 3:
+                endFlag.x = X_OFFSET + j * BLOCK_SIZE + BLOCK_SIZE;  // Calculo de la posicion en X
+                endFlag.y = Y_OFFSET + i * BLOCK_SIZE;  // Calculo de la posicion en Y
+                map[i][j] = 0;
+                break;
+            default:
+                map[i][j] = 0;
+            }
         }
     }
+    flags[0] = startFlag;
+    flags[1] = endFlag;
     // Se construye una lista con todos los muros del laberinto
     struct Wall *walls = malloc(sizeof(*walls)*totalWalls);
     //struct Wall walls[totalWalls];
@@ -59,7 +84,7 @@ Wall* createMap() {
             if(map[i][j]) { // Verifica si en la casilla se debe colocar un muro
                 struct Wall wallEntity;  // Se crea un nuevo muro
                 wallEntity.x = X_OFFSET + j * BLOCK_SIZE;  // Calculo de la posicion en X
-                wallEntity.y = Y_OFFSET + i * BLOCK_SIZE;  // Calculo de la posicion en Ys
+                wallEntity.y = Y_OFFSET + i * BLOCK_SIZE;  // Calculo de la posicion en Y
                 walls[wallCounter] = wallEntity;  // Alcenamiento en una lista de muros
                 wallCounter++;  // Aumentar contador de muros
             }
