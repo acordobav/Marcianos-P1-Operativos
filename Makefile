@@ -1,2 +1,2 @@
-hello: hello.c
-	gcc hello.c -o hello -lallegro -lallegro_dialog -lallegro_font -lallegro_image
+gamewindow: gamewindow.c
+	gcc gamewindow.c -o gamewindow -lallegro -lallegro_dialog -lallegro_font -lallegro_image
