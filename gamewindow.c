@@ -6,7 +6,7 @@
 
 #include "createmap.c"
 
-#define ScreenWidth 690
+#define ScreenWidth 830
 #define ScreenHeight 690 
 #define maxAliens 30
 #define moveSpeed 4;
@@ -24,6 +24,7 @@ typedef struct Alien {
     int energy;
     int period;
     int isFinished;
+    int regenerationTimer;
 } Alien;
 
 Wall* walls;
@@ -32,6 +33,7 @@ Alien* aliens;
 void drawWalls(ALLEGRO_BITMAP *wallSprite);
 void drawFlags(ALLEGRO_BITMAP *startFlagSprite, ALLEGRO_BITMAP *endFlagSprite);
 void drawAliens(ALLEGRO_BITMAP *alienSprite);
+void drawAliensInfo(ALLEGRO_FONT* font);
 void animateAliens();
 void createAlien(int period, int energy);
 void checkCollisions();
@@ -108,7 +110,7 @@ int main() {
                 } else if(al_key_down(&keyState, ALLEGRO_KEY_A)){
                     createAlien(20,20);
                 } else if(al_key_down(&keyState, ALLEGRO_KEY_S)){
-                    alien->isActive = !alien->isActive;
+                    alien->isActive = 1;
                 }
                 checkCollisions();
             } else if(event.timer.source == animationTimer){
@@ -121,14 +123,7 @@ int main() {
         if(redraw && al_is_event_queue_empty(queue))
         {
             al_clear_to_color(al_map_rgb(0, 0, 0));
-
-            char text[100];
-            char energy[50];
-            sprintf(energy, "%d", aliens[0].energy);
-            strcpy(text, "Energia: ");
-            strcpy(text, energy);
-
-            al_draw_text(font, al_map_rgb(255, 255, 255), 0, 0, 0, text);
+            drawAliensInfo(font);
             drawWalls(wallSprite);
             drawFlags(startFlagSprite, endFlagSprite);
             drawAliens(alienSprite);
@@ -164,10 +159,11 @@ void createAlien(int period, int energy) {
     alien.y = flags[0].y; // Posicion en y del punto de partida
     alien.dir = DOWN;     // Direccion de movimiento inicial
     alien.sourceX = BLOCK_SIZE;
-    alien.isActive = 1;   // Estado de activiacion inicial
+    alien.isActive = 0;   // Estado de activiacion inicial
     alien.period = period;// Periodo del alien
     alien.energy = energy;// Energia del alien
     alien.isFinished = 0; // Estado de finalizacion no completado
+    alien.regenerationTimer = 0;// Contador de tiempo de regeneracion
     aliens[alienCount] = alien; // Se almacena en la lista de aliens
     alienCount++;         // Aumenta contador de aliens
 }
@@ -205,6 +201,47 @@ void drawAliens(ALLEGRO_BITMAP *alienSprite) {
                                 BLOCK_SIZE, BLOCK_SIZE, alien.x, alien.y, 0);
         }
     }
+}
+
+/**
+ * Funcion encargada de dibujar la informacion de los Aliens
+**/
+void drawAliensInfo(ALLEGRO_FONT* font) {
+    int y = Y_OFFSET;
+    int x = X_OFFSET + 22 * BLOCK_SIZE;
+
+    ALLEGRO_COLOR inactiveTextColor = al_map_rgb(255, 255, 255);
+    ALLEGRO_COLOR activeTextColor = al_map_rgb(255, 0, 0);
+
+    for (int i = 0; i < alienCount; i++) {
+        Alien alien = aliens[i];
+        ALLEGRO_COLOR textColor = inactiveTextColor;
+        if(alien.isActive) textColor = activeTextColor;
+
+        // Dibujado del identificador
+        char id[20] = "";
+        char idValue[10];
+        sprintf(idValue, "%d", alien.id);
+        strcat(id, idValue);
+        al_draw_text(font, textColor, x, y, 0, id);
+
+        // Dibujado de la energia
+        char energy[20] = "E: ";
+        char energyValue[10];
+        sprintf(energyValue, "%d", alien.energy);
+        strcat(energy, energyValue);
+        al_draw_text(font, textColor, x + BLOCK_SIZE, y, 0, energy);
+        
+        // Dibujado del tiempo de regeneracion
+        char regeneration[20] = "R: ";
+        char regenerationValue[10];
+        sprintf(regenerationValue, "%d", alien.regenerationTimer);
+        strcat(regeneration, regenerationValue);
+        al_draw_text(font, textColor, x + BLOCK_SIZE * 3, y, 0, regeneration);
+        y += BLOCK_SIZE / 2;
+    }
+
+
 }
 
 /**
@@ -351,6 +388,9 @@ void moveAlien() {
     }
 }
 
+/**
+ * Funcion para actualizar el valor de energia de los Aliens
+**/
 void updateEnergy() {
     for(int i = 0; i < alienCount; i++) {
         Alien *alien = &aliens[i];
@@ -358,12 +398,12 @@ void updateEnergy() {
         if(alien->isActive) {
             alien->energy -= 1;
             // Se verifica el nivel de energia del Alien
-            if(alien->energy == 0) {
+            if(alien->energy <= 0) {
                 alien->isActive = 0;
             }
+            // Como solo un Alien deberia moverse a la vez, se 
+            // hace un break para descartar los demas casos
+            break;
         }
-        // Como solo un Alien deberia moverse a la vez, se 
-        // hace un break para descartar los demas casos
-        break;
     }
 }
