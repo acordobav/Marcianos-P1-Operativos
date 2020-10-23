@@ -9,7 +9,7 @@
 #define ScreenWidth 690
 #define ScreenHeight 690 
 #define maxAliens 30
-#define moveSpeed 1;
+#define moveSpeed 4;
 
 const float FPS = 30.0;
 const float animationFPS = 6.0;
@@ -39,8 +39,10 @@ bool isCollisioned(int x1, int x2, int y1, int y2);
 void getNewDirection(Alien* alien);
 void restorePosition(Alien* alien);
 void moveAlien();
+void updateEnergy();
 
 int main() {
+    int executionCounter = FPS;
     srand(time(NULL)); // Inicializacion para numeros random, solo debe llamarse una vez
     walls = createMap();
     aliens = (Alien*) malloc(sizeof(*aliens)*maxAliens);
@@ -81,25 +83,27 @@ int main() {
 
         if(event.type == ALLEGRO_EVENT_TIMER){
             if(event.timer.source == timer) {
-                redraw = true;
                 moveAlien();
+                
+                // Disminucion de niveles de energia
+                executionCounter -= 1;
+                if(executionCounter <= 0) {
+                    updateEnergy();
+                    executionCounter = FPS;
+                }
+                redraw = true;
                 Alien *alien = &aliens[0];
-                //alien->isActive = 0;
                 if(al_key_down(&keyState, ALLEGRO_KEY_DOWN)){
                     alien->y += moveSpeed;
-                    alien->isActive = 1;
                     alien->dir = DOWN;
                 } else if(al_key_down(&keyState, ALLEGRO_KEY_UP)){
                     alien->y -= moveSpeed;
-                    alien->isActive = 1;
                     alien->dir = UP;
                 } else if(al_key_down(&keyState, ALLEGRO_KEY_RIGHT)){
                     alien->x += moveSpeed;
-                    alien->isActive = 1;
                     alien->dir = RIGHT;
                 } else if(al_key_down(&keyState, ALLEGRO_KEY_LEFT)){
                     alien->x -= moveSpeed;
-                    alien->isActive = 1;
                     alien->dir = LEFT;
                 } else if(al_key_down(&keyState, ALLEGRO_KEY_A)){
                     createAlien(20,20);
@@ -160,7 +164,7 @@ void createAlien(int period, int energy) {
     alien.y = flags[0].y; // Posicion en y del punto de partida
     alien.dir = DOWN;     // Direccion de movimiento inicial
     alien.sourceX = BLOCK_SIZE;
-    alien.isActive = 0;   // Estado de activiacion inicial
+    alien.isActive = 1;   // Estado de activiacion inicial
     alien.period = period;// Periodo del alien
     alien.energy = energy;// Energia del alien
     alien.isFinished = 0; // Estado de finalizacion no completado
@@ -212,11 +216,11 @@ void animateAliens() {
         if(!alien->isFinished){ // Se verifica que el alien no haya llegado a la meta
             if(alien->isActive) { // Se verifica que el alien se encuentre en movimiento
                 alien->sourceX += BLOCK_SIZE;
+                if(alien->sourceX >= BLOCK_SIZE*3) {
+                    alien->sourceX = 0;
+                }
             } else {
                 alien->sourceX = BLOCK_SIZE;
-            }
-            if(alien->sourceX >= BLOCK_SIZE*3) {
-                alien->sourceX = 0;
             }
         }
     }
@@ -241,22 +245,27 @@ void checkCollisions() {
         }
 
         // Colisiones con otros Aliens
-        for (int j = 0; j < alienCount; j++) {
-            if(i != j) {
-                Alien *alien2 = &aliens[j]; // Se obtiene un alien
-                // Se verifica si los aliens estan colisionando y si tienen la misma direccion
-                if(isCollisioned(alien->x, alien2->x, alien->y, alien2->y) && alien->dir == alien2->dir){
-                    // Se restaura la posicion del alien
-                    restorePosition(alien);
-                    // Se calcula una nueva direccion para el Alien
-                    getNewDirection(alien);
+        if (alien->isActive) {
+            for (int j = 0; j < alienCount; j++) {
+                if(i != j) {
+                    Alien *alien2 = &aliens[j]; // Se obtiene un alien
+                    // Se verifica si los aliens estan colisionando y si tienen la misma direccion
+                    if(isCollisioned(alien->x, alien2->x, alien->y, alien2->y) && alien->dir == alien2->dir){
+                        // Se restaura la posicion del alien
+                        restorePosition(alien);
+                        // Se calcula una nueva direccion para el Alien
+                        getNewDirection(alien);
+                    }
                 }
             }
         }
 
         // Verificacion de llegada a la meta, colision con la bandera de finalizacion
         if(isCollisioned(alien->x, flags[1].x, alien->y, flags[1].y)) {
+            alien->isActive = 0;
             alien->isFinished = 1;
+            alien->x = 0;
+            alien->y = 0;
         }
     }
 }
@@ -335,13 +344,22 @@ void moveAlien() {
             default:
                 break;
             }
-            // Se verifica el nivel de energia del Alien
-            if(alien->y % BLOCK_SIZE == 0 && alien->x % BLOCK_SIZE == 0) {
-                alien->energy -= 1;
+        }
+        // Como solo un Alien deberia moverse a la vez, se 
+        // hace un break para descartar los demas casos
+        //break;
+    }
+}
 
-                if(alien->energy == 0) {
-                    alien->isActive = 0;
-                }
+void updateEnergy() {
+    for(int i = 0; i < alienCount; i++) {
+        Alien *alien = &aliens[i];
+        // Se verifica que el Alien se encuentre activo
+        if(alien->isActive) {
+            alien->energy -= 1;
+            // Se verifica el nivel de energia del Alien
+            if(alien->energy == 0) {
+                alien->isActive = 0;
             }
         }
         // Como solo un Alien deberia moverse a la vez, se 
