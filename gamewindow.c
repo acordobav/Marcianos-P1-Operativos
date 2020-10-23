@@ -9,7 +9,7 @@
 #define ScreenWidth 690
 #define ScreenHeight 690 
 #define maxAliens 30
-#define moveSpeed 5;
+#define moveSpeed 1;
 
 const float FPS = 30.0;
 const float animationFPS = 6.0;
@@ -38,6 +38,7 @@ void checkCollisions();
 bool isCollisioned(int x1, int x2, int y1, int y2);
 void getNewDirection(Alien* alien);
 void restorePosition(Alien* alien);
+void moveAlien();
 
 int main() {
     srand(time(NULL)); // Inicializacion para numeros random, solo debe llamarse una vez
@@ -81,9 +82,9 @@ int main() {
         if(event.type == ALLEGRO_EVENT_TIMER){
             if(event.timer.source == timer) {
                 redraw = true;
-                
+                moveAlien();
                 Alien *alien = &aliens[0];
-                alien->isActive = 0;
+                //alien->isActive = 0;
                 if(al_key_down(&keyState, ALLEGRO_KEY_DOWN)){
                     alien->y += moveSpeed;
                     alien->isActive = 1;
@@ -102,6 +103,8 @@ int main() {
                     alien->dir = LEFT;
                 } else if(al_key_down(&keyState, ALLEGRO_KEY_A)){
                     createAlien(20,20);
+                } else if(al_key_down(&keyState, ALLEGRO_KEY_S)){
+                    alien->isActive = !alien->isActive;
                 }
                 checkCollisions();
             } else if(event.timer.source == animationTimer){
@@ -114,7 +117,14 @@ int main() {
         if(redraw && al_is_event_queue_empty(queue))
         {
             al_clear_to_color(al_map_rgb(0, 0, 0));
-            al_draw_text(font, al_map_rgb(255, 255, 255), 0, 0, 0, "Hello world!");
+
+            char text[100];
+            char energy[50];
+            sprintf(energy, "%d", aliens[0].energy);
+            strcpy(text, "Energia: ");
+            strcpy(text, energy);
+
+            al_draw_text(font, al_map_rgb(255, 255, 255), 0, 0, 0, text);
             drawWalls(wallSprite);
             drawFlags(startFlagSprite, endFlagSprite);
             drawAliens(alienSprite);
@@ -301,5 +311,41 @@ void restorePosition(Alien* alien) {
         } else if (alien->dir == RIGHT) {
             alien->x -= moveSpeed;
         }
+    }
+}
+
+void moveAlien() {
+    for(int i = 0; i < alienCount; i++) {
+        Alien *alien = &aliens[i];
+        // Se verifica que el Alien se encuentre activo
+        if(alien->isActive) {
+            switch (alien->dir) {
+            case DOWN:
+                alien->y += moveSpeed;
+                break;
+            case UP:
+                alien->y -= moveSpeed;
+                break; 
+            case RIGHT:
+                alien->x += moveSpeed;
+                break;
+            case LEFT:
+                alien->x -= moveSpeed;
+                break;
+            default:
+                break;
+            }
+            // Se verifica el nivel de energia del Alien
+            if(alien->y % BLOCK_SIZE == 0 && alien->x % BLOCK_SIZE == 0) {
+                alien->energy -= 1;
+
+                if(alien->energy == 0) {
+                    alien->isActive = 0;
+                }
+            }
+        }
+        // Como solo un Alien deberia moverse a la vez, se 
+        // hace un break para descartar los demas casos
+        break;
     }
 }
