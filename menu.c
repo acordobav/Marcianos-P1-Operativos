@@ -9,10 +9,11 @@
 #include <unistd.h>
 #include <stdbool.h>
 
-#define SCREENWIDTH 690
-#define SCREENHEIGHT 820
+int SCREENWIDTH = 690;
+int SCREENHEIGHT = 690;
 
 void draw_menu(ALLEGRO_FONT *title, ALLEGRO_FONT *mode, ALLEGRO_BITMAP *stars);
+void draw_algor(ALLEGRO_FONT *title, ALLEGRO_FONT *select, ALLEGRO_BITMAP *stars);
 void draw_manual(ALLEGRO_FONT *subtitle, ALLEGRO_FONT *stat, ALLEGRO_FONT *number, int energy_alien, int regen_alien);
 void draw_autom(ALLEGRO_FONT *subtitle, ALLEGRO_FONT *stat, ALLEGRO_FONT *number, ALLEGRO_BITMAP *stars, int num_alien, int energy_alien, int regen_alien);
 
@@ -24,7 +25,7 @@ int main()
         exit(1);
     }
 
-    al_set_new_display_flags(ALLEGRO_WINDOWED | ALLEGRO_RESIZABLE);
+    al_set_new_display_flags(ALLEGRO_WINDOWED);
     ALLEGRO_DISPLAY *display = al_create_display(SCREENWIDTH, SCREENHEIGHT);
     al_set_window_position(display, 200, 100);
     al_set_window_title(display, "Proyecto 1 PSO");
@@ -86,6 +87,49 @@ int main()
     //printf("%d\n", modeop);
     if(modeop == 1)
     {   
+        SCREENHEIGHT = 820;
+        al_resize_display(display, SCREENWIDTH, SCREENHEIGHT);
+        ALLEGRO_FONT *title = al_load_ttf_font("Orbitron-Bold.ttf", 36, ALLEGRO_TTF_MONOCHROME);
+        ALLEGRO_FONT *select = al_load_ttf_font("Orbitron-Bold.ttf", 28, ALLEGRO_TTF_MONOCHROME);
+
+        ALLEGRO_EVENT_QUEUE *event_plan = al_create_event_queue();
+        al_register_event_source(event_plan, al_get_keyboard_event_source());
+
+        int algorithm;
+
+        bool plan = false;
+        while(!plan)
+        {
+            draw_algor(title, select, stars);
+
+            ALLEGRO_EVENT events2;
+            al_wait_for_event(event_plan, &events2);
+            if (events2.type == ALLEGRO_EVENT_KEY_DOWN)
+            {
+                switch (events2.keyboard.keycode)
+                {
+                case ALLEGRO_KEY_X:
+                    exit(1);
+                    break;
+                case ALLEGRO_KEY_1:
+                    algorithm = 1;
+                    plan = true;
+                    break;
+                case ALLEGRO_KEY_2:
+                    algorithm = 2;
+                    plan = true;
+                    break;
+                default:
+                    break;
+                }
+            }
+
+            al_clear_to_color(al_map_rgb(0,0,0));
+        }
+        al_destroy_font(title);
+        al_destroy_font(select);
+        al_destroy_event_queue(event_plan);
+
         ALLEGRO_FONT *subtitle = al_load_ttf_font("Orbitron-Bold.ttf", 22, ALLEGRO_TTF_MONOCHROME);
         ALLEGRO_FONT *stat = al_load_ttf_font("Orbitron-Bold.ttf", 16, ALLEGRO_TTF_MONOCHROME);
         ALLEGRO_FONT *number =  al_load_ttf_font("Orbitron-Bold.ttf", 20, ALLEGRO_TTF_MONOCHROME);
@@ -101,12 +145,12 @@ int main()
         {
             draw_manual(subtitle, stat, number, energy_alien, regen_alien);
 
-            ALLEGRO_EVENT events2;
-            al_wait_for_event(event_manual, &events2);
+            ALLEGRO_EVENT events3;
+            al_wait_for_event(event_manual, &events3);
 
-            if (events2.type == ALLEGRO_EVENT_KEY_DOWN)
+            if (events3.type == ALLEGRO_EVENT_KEY_DOWN)
             {
-                switch (events2.keyboard.keycode)
+                switch (events3.keyboard.keycode)
                 {
                 case ALLEGRO_KEY_X:
                     manual = true;
@@ -146,7 +190,48 @@ int main()
 
     }
     else if(modeop == 2)
-    {
+    {   
+        ALLEGRO_FONT *title = al_load_ttf_font("Orbitron-Bold.ttf", 36, ALLEGRO_TTF_MONOCHROME);
+        ALLEGRO_FONT *select = al_load_ttf_font("Orbitron-Bold.ttf", 28, ALLEGRO_TTF_MONOCHROME);
+
+        ALLEGRO_EVENT_QUEUE *event_plan = al_create_event_queue();
+        al_register_event_source(event_plan, al_get_keyboard_event_source());
+
+        int algorithm;
+
+        bool plan = false;
+        while(!plan)
+        {
+            draw_algor(title, select, stars);
+
+            ALLEGRO_EVENT events4;
+            al_wait_for_event(event_plan, &events4);
+            if (events4.type == ALLEGRO_EVENT_KEY_DOWN)
+            {
+                switch (events4.keyboard.keycode)
+                {
+                case ALLEGRO_KEY_X:
+                    exit(1);
+                    break;
+                case ALLEGRO_KEY_1:
+                    algorithm = 1;
+                    plan = true;
+                    break;
+                case ALLEGRO_KEY_2:
+                    algorithm = 2;
+                    plan = true;
+                    break;
+                default:
+                    break;
+                }
+            }
+
+            al_clear_to_color(al_map_rgb(0,0,0));
+        }
+        al_destroy_font(title);
+        al_destroy_font(select);
+        al_destroy_event_queue(event_plan);
+
         ALLEGRO_FONT *subtitle = al_load_ttf_font("Orbitron-Bold.ttf", 36, ALLEGRO_TTF_MONOCHROME);
         ALLEGRO_FONT *stat = al_load_ttf_font("Orbitron-Bold.ttf", 16, ALLEGRO_TTF_MONOCHROME);
         ALLEGRO_FONT *number =  al_load_ttf_font("Orbitron-Bold.ttf", 36, ALLEGRO_TTF_MONOCHROME);
@@ -228,6 +313,15 @@ void draw_menu(ALLEGRO_FONT *title, ALLEGRO_FONT *mode, ALLEGRO_BITMAP *stars)
     al_draw_text(title, al_map_rgb(44, 117, 255), SCREENWIDTH / 2, SCREENHEIGHT / 4, ALLEGRO_ALIGN_CENTRE, "ALIEN");
     al_draw_text(mode, al_map_rgb(0, 255, 0), SCREENWIDTH / 2, SCREENHEIGHT / 2, ALLEGRO_ALIGN_CENTRE, "1) Modo Manual");
     al_draw_text(mode, al_map_rgb(0, 255, 0), SCREENWIDTH / 2, 3 * SCREENHEIGHT / 4, ALLEGRO_ALIGN_CENTRE, "2) Modo Automatico");
+    al_flip_display();
+}
+
+void draw_algor(ALLEGRO_FONT *title, ALLEGRO_FONT *select, ALLEGRO_BITMAP *stars)
+{
+    al_draw_bitmap(stars, 0, 0, 0);
+    al_draw_text(title, al_map_rgb(44, 117, 255), SCREENWIDTH / 2, SCREENHEIGHT / 4, ALLEGRO_ALIGN_CENTRE, "SELECCIONAR");
+    al_draw_text(select, al_map_rgb(0, 255, 0), SCREENWIDTH / 2, SCREENHEIGHT / 2, ALLEGRO_ALIGN_CENTRE, "1) ALGORITMO RM");
+    al_draw_text(select, al_map_rgb(0, 255, 0), SCREENWIDTH / 2, 3 * SCREENHEIGHT / 4, ALLEGRO_ALIGN_CENTRE, "2) ALGORITMO EDF");
     al_flip_display();
 }
 
