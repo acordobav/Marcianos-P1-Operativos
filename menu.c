@@ -9,8 +9,8 @@
 #include <unistd.h>
 #include <stdbool.h>
 
-#define SCREENWIDTH 690
-#define SCREENHEIGHT 820
+int SCREENWIDTH = 690;
+int SCREENHEIGHT = 690;
 
 void draw_menu(ALLEGRO_FONT *title, ALLEGRO_FONT *mode, ALLEGRO_BITMAP *stars);
 void draw_algor(ALLEGRO_FONT *title, ALLEGRO_FONT *select, ALLEGRO_BITMAP *stars);
@@ -25,7 +25,7 @@ int main()
         exit(1);
     }
 
-    al_set_new_display_flags(ALLEGRO_WINDOWED | ALLEGRO_RESIZABLE);
+    al_set_new_display_flags(ALLEGRO_WINDOWED);
     ALLEGRO_DISPLAY *display = al_create_display(SCREENWIDTH, SCREENHEIGHT);
     al_set_window_position(display, 200, 100);
     al_set_window_title(display, "Proyecto 1 PSO");
@@ -87,6 +87,8 @@ int main()
     //printf("%d\n", modeop);
     if(modeop == 1)
     {   
+        SCREENHEIGHT = 820;
+        al_resize_display(display, SCREENWIDTH, SCREENHEIGHT);
         ALLEGRO_FONT *title = al_load_ttf_font("Orbitron-Bold.ttf", 36, ALLEGRO_TTF_MONOCHROME);
         ALLEGRO_FONT *select = al_load_ttf_font("Orbitron-Bold.ttf", 28, ALLEGRO_TTF_MONOCHROME);
 
