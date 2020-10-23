@@ -243,6 +243,11 @@ void checkCollisions() {
                 }
             }
         }
+
+        // Verificacion de llegada a la meta, colision con la bandera de finalizacion
+        if(isCollisioned(alien->x, flags[1].x, alien->y, flags[1].y)) {
+            alien->isFinished = 1;
+        }
     }
 }
 
