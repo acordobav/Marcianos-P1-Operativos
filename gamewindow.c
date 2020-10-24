@@ -43,21 +43,20 @@ void getNewDirection(Alien* alien);
 void restorePosition(Alien* alien);
 void moveAlien();
 void updateEnergy();
+void updateRegenerationTimer();
 void draw_manual(ALLEGRO_FONT *subtitle, ALLEGRO_FONT *stat, ALLEGRO_FONT *number, int energy_alien, int regen_alien);
-int gamewindow();
-/*
-int main() {
-    gamewindow();
-    return 0;
-}*/
+void gamewindow();
+void updateReport(FILE *fptr);
 
-int gamewindow(int modeop, int algorithm) {
+void gamewindow(int modeop, int algorithm) {
     int executionCounter = FPS;
     srand(time(NULL)); // Inicializacion para numeros random, solo debe llamarse una vez
     createAlien(10, 10);
 
     int energy_alien = 1;
     int regen_alien = 1;
+
+    FILE *fptr = fopen("report.txt","w");
 
     // Inicio interfaz grafica
     al_init();
@@ -138,7 +137,9 @@ int gamewindow(int modeop, int algorithm) {
                 // Disminucion de niveles de energia
                 executionCounter -= 1;
                 if(executionCounter <= 0) {
+                    updateReport(fptr);
                     updateEnergy();
+                    updateRegenerationTimer();
                     executionCounter = FPS;
                 }
                 redraw = true;
@@ -176,9 +177,9 @@ int gamewindow(int modeop, int algorithm) {
     al_destroy_bitmap(startFlagSprite);
     al_destroy_bitmap(endFlagSprite);
     al_destroy_bitmap(alienSprite);
+    fclose(fptr);
 
     free(walls);
-    return 0;
 }
 
 /**
@@ -188,7 +189,7 @@ int gamewindow(int modeop, int algorithm) {
 **/ 
 void createAlien(int period, int energy) {
     Alien alien;
-    alien.id = alienCount;// Identificador del alien
+    alien.id = alienCount+1;// Identificador del alien
     alien.x = flags[0].x; // Posicion en x del punto de partida
     alien.y = flags[0].y; // Posicion en y del punto de partida
     alien.dir = DOWN;     // Direccion de movimiento inicial
@@ -394,6 +395,9 @@ void restorePosition(Alien* alien) {
     }
 }
 
+/**
+ * Funcion para mover automaaticamente a los Aliens
+**/
 void moveAlien() {
     for(int i = 0; i < alienCount; i++) {
         Alien *alien = &aliens[i];
@@ -434,10 +438,25 @@ void updateEnergy() {
             // Se verifica el nivel de energia del Alien
             if(alien->energy <= 0) {
                 alien->isActive = 0;
+                alien->regenerationTimer = alien->period;
             }
             // Como solo un Alien deberia moverse a la vez, se 
             // hace un break para descartar los demas casos
             break;
+        }
+    }
+}
+
+/**
+ * Funcion para actualizar el contador de regeneracion de los Aliens
+**/
+void updateRegenerationTimer() {
+    for(int i = 0; i < alienCount; i++) {
+        Alien *alien = &aliens[i];
+        // Se verifica que el Alien no se encuentre activo
+        if(!alien->isActive && alien->regenerationTimer > 0) {
+            // Se actualiza el contador de regeneracion del Alien
+            alien->regenerationTimer -= 1;
         }
     }
 }
@@ -461,4 +480,21 @@ void draw_manual(ALLEGRO_FONT *subtitle, ALLEGRO_FONT *stat, ALLEGRO_FONT *numbe
     al_draw_text(number, al_map_rgb(255, 128, 0), 3 * ScreenWidth / 4, ScreenHeight - 30 - BLOCK_SIZE, ALLEGRO_ALIGN_CENTRE, alien_regen);
 
     al_draw_text(stat, al_map_rgb(44, 117, 255), ScreenWidth / 2, ScreenHeight - 20 - BLOCK_SIZE, ALLEGRO_ALIGN_CENTRE, "'ENTER': CREAR");
+}
+
+/**
+ * Funcion para escribir el reporte de ejecucion del algoritmo
+**/
+void updateReport(FILE *fptr) {
+    int id = 0;
+    // Se obtiene el identificador del Alien activo
+    for(int i = 0; i < alienCount; i++) {
+        Alien alien = aliens[i];
+        if(alien.isActive) {
+            id = alien.id;
+            break;
+        }
+    }
+    fprintf(fptr, "%d", id); // Escritura del identificador
+    fwrite(" ", 1, 1, fptr); // Escritura de un espacio en blanco
 }
