@@ -9,6 +9,8 @@
 #include <unistd.h>
 #include <stdbool.h>
 
+#include "gamewindow.c"
+
 int SCREENWIDTH = 690;
 int SCREENHEIGHT = 690;
 
@@ -19,13 +21,14 @@ void draw_autom(ALLEGRO_FONT *subtitle, ALLEGRO_FONT *stat, ALLEGRO_FONT *number
 
 int main()
 {   
+    aliens = (Alien*) malloc(sizeof(*aliens)*maxAliens);
+    walls = createMap();
     if(!al_init())
     {
         printf("Error al inicializar Allegro");
         exit(1);
     }
 
-    al_set_new_display_flags(ALLEGRO_WINDOWED);
     ALLEGRO_DISPLAY *display = al_create_display(SCREENWIDTH, SCREENHEIGHT);
     al_set_window_position(display, 200, 100);
     al_set_window_title(display, "Proyecto 1 PSO");
@@ -35,7 +38,6 @@ int main()
         printf("Error al crear pantalla");
         exit(1);
     }
-
     al_init_font_addon();
     al_init_ttf_addon();
     al_install_keyboard();
@@ -125,15 +127,8 @@ int main()
     al_destroy_event_queue(event_menu);
 
     //printf("%d\n", modeop);
-    if(modeop == 1)
-    {   
-        //SCREENHEIGHT = 820;
-        //al_resize_display(display, SCREENWIDTH, SCREENHEIGHT);
 
-        //Se llama al juego al juego modo manual
-
-    }
-    else if(modeop == 2)
+    if(modeop == 2)
     {   
         ALLEGRO_FONT *subtitle = al_load_ttf_font("Orbitron-Bold.ttf", 36, ALLEGRO_TTF_MONOCHROME);
         ALLEGRO_FONT *stat = al_load_ttf_font("Orbitron-Bold.ttf", 16, ALLEGRO_TTF_MONOCHROME);
@@ -181,6 +176,7 @@ int main()
                     break;
                 case ALLEGRO_KEY_SPACE:
                     //Funcion crear marciano
+                    createAlien(regen_alien, energy_alien);
                     num_alien += 1;
                     energy_alien = 1;
                     regen_alien = 1;
@@ -201,13 +197,9 @@ int main()
         al_destroy_bitmap(stars);
         al_destroy_event_queue(event_autom);
 
-
-        //Se llama al juego modo automatico
     }
-
-
     al_destroy_display(display);
-
+    gamewindow(modeop, algorithm);
 }
 
 void draw_menu(ALLEGRO_FONT *title, ALLEGRO_FONT *mode, ALLEGRO_BITMAP *stars)

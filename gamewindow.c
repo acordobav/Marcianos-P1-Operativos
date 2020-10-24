@@ -3,11 +3,12 @@
 #include <allegro5/allegro5.h>
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_image.h>
+#include <allegro5/allegro_ttf.h>
 
 #include "createmap.c"
 
 #define ScreenWidth 830
-#define ScreenHeight 690 
+#define ScreenHeight 830 
 #define maxAliens 30
 #define moveSpeed 4;
 
@@ -42,18 +43,28 @@ void getNewDirection(Alien* alien);
 void restorePosition(Alien* alien);
 void moveAlien();
 void updateEnergy();
-
+void draw_manual(ALLEGRO_FONT *subtitle, ALLEGRO_FONT *stat, ALLEGRO_FONT *number, int energy_alien, int regen_alien);
+int gamewindow();
+/*
 int main() {
+    gamewindow();
+    return 0;
+}*/
+
+int gamewindow(int modeop, int algorithm) {
     int executionCounter = FPS;
     srand(time(NULL)); // Inicializacion para numeros random, solo debe llamarse una vez
-    walls = createMap();
-    aliens = (Alien*) malloc(sizeof(*aliens)*maxAliens);
     createAlien(10, 10);
+
+    int energy_alien = 1;
+    int regen_alien = 1;
 
     // Inicio interfaz grafica
     al_init();
     al_install_keyboard();
     al_init_image_addon();
+    al_init_font_addon();
+    al_init_ttf_addon();
 
     ALLEGRO_KEYBOARD_STATE keyState;
 
@@ -66,6 +77,8 @@ int main() {
     ALLEGRO_TIMER* animationTimer = al_create_timer(1.0 / animationFPS);
     ALLEGRO_EVENT_QUEUE* queue = al_create_event_queue();
     ALLEGRO_DISPLAY* disp = al_create_display(ScreenWidth, ScreenHeight);
+    al_set_window_title(disp, "Proyecto 1 PSO - Simulacion");
+    if(modeop == 2) al_resize_display(disp, ScreenWidth, 690);
     ALLEGRO_FONT* font = al_create_builtin_font();
 
     al_register_event_source(queue, al_get_keyboard_event_source());
@@ -73,17 +86,52 @@ int main() {
     al_register_event_source(queue, al_get_timer_event_source(timer));
     al_register_event_source(queue, al_get_timer_event_source(animationTimer));
 
+    ALLEGRO_FONT *subtitle = al_load_ttf_font("Orbitron-Bold.ttf", 22, ALLEGRO_TTF_MONOCHROME);
+    ALLEGRO_FONT *stat = al_load_ttf_font("Orbitron-Bold.ttf", 16, ALLEGRO_TTF_MONOCHROME);
+    ALLEGRO_FONT *number =  al_load_ttf_font("Orbitron-Bold.ttf", 20, ALLEGRO_TTF_MONOCHROME);
+
     bool redraw = true;
     ALLEGRO_EVENT event;
 
     al_start_timer(timer);
     al_start_timer(animationTimer);
-    while(1)
+
+    int gameLoop = 1;
+    while(gameLoop)
     {
         al_wait_for_event(queue, &event);
         al_get_keyboard_state(&keyState);
 
-        if(event.type == ALLEGRO_EVENT_TIMER){
+        if (event.type == ALLEGRO_EVENT_KEY_DOWN) {
+            switch (event.keyboard.keycode) {
+                case ALLEGRO_KEY_X:
+                    // Detener juego 
+                    gameLoop = 0;
+                    break;
+                case ALLEGRO_KEY_E:
+                    // Aumentar energia nuevo Alien
+                    energy_alien += 1;
+                    break;
+                case ALLEGRO_KEY_D:
+                    // Disminuir energia nuevo Alien
+                    if (energy_alien > 1) energy_alien -= 1;
+                    break;
+                case ALLEGRO_KEY_R:
+                    // Aumentar periodo nuevo Alien
+                    regen_alien += 1;
+                    break;
+                case ALLEGRO_KEY_F:
+                    // Disminuir periodo nuevo Alien
+                    if(regen_alien > 1) regen_alien -= 1;
+                    break;
+                case ALLEGRO_KEY_ENTER:
+                    // Crear nuevo Alien
+                    if (modeop == 1) createAlien(regen_alien, energy_alien);
+                    break;
+                default:
+                    break;
+            }
+        } else if(event.type == ALLEGRO_EVENT_TIMER){
             if(event.timer.source == timer) {
                 moveAlien();
                 
@@ -94,24 +142,6 @@ int main() {
                     executionCounter = FPS;
                 }
                 redraw = true;
-                Alien *alien = &aliens[0];
-                if(al_key_down(&keyState, ALLEGRO_KEY_DOWN)){
-                    alien->y += moveSpeed;
-                    alien->dir = DOWN;
-                } else if(al_key_down(&keyState, ALLEGRO_KEY_UP)){
-                    alien->y -= moveSpeed;
-                    alien->dir = UP;
-                } else if(al_key_down(&keyState, ALLEGRO_KEY_RIGHT)){
-                    alien->x += moveSpeed;
-                    alien->dir = RIGHT;
-                } else if(al_key_down(&keyState, ALLEGRO_KEY_LEFT)){
-                    alien->x -= moveSpeed;
-                    alien->dir = LEFT;
-                } else if(al_key_down(&keyState, ALLEGRO_KEY_A)){
-                    createAlien(20,20);
-                } else if(al_key_down(&keyState, ALLEGRO_KEY_S)){
-                    alien->isActive = 1;
-                }
                 checkCollisions();
             } else if(event.timer.source == animationTimer){
                 animateAliens();
@@ -123,6 +153,7 @@ int main() {
         if(redraw && al_is_event_queue_empty(queue))
         {
             al_clear_to_color(al_map_rgb(0, 0, 0));
+            if (modeop == 1) draw_manual(subtitle, stat, number, energy_alien, regen_alien);
             drawAliensInfo(font);
             drawWalls(wallSprite);
             drawFlags(startFlagSprite, endFlagSprite);
@@ -134,6 +165,9 @@ int main() {
     }
 
     al_destroy_font(font);
+    al_destroy_font(subtitle);
+    al_destroy_font(stat);
+    al_destroy_font(number);
     al_destroy_display(disp);
     al_destroy_timer(timer);
     al_destroy_timer(animationTimer);
@@ -159,7 +193,7 @@ void createAlien(int period, int energy) {
     alien.y = flags[0].y; // Posicion en y del punto de partida
     alien.dir = DOWN;     // Direccion de movimiento inicial
     alien.sourceX = BLOCK_SIZE;
-    alien.isActive = 0;   // Estado de activiacion inicial
+    alien.isActive = 1;   // Estado de activiacion inicial
     alien.period = period;// Periodo del alien
     alien.energy = energy;// Energia del alien
     alien.isFinished = 0; // Estado de finalizacion no completado
@@ -406,4 +440,25 @@ void updateEnergy() {
             break;
         }
     }
+}
+
+void draw_manual(ALLEGRO_FONT *subtitle, ALLEGRO_FONT *stat, ALLEGRO_FONT *number, int energy_alien, int regen_alien)
+{
+    al_draw_text(subtitle, al_map_rgb(44, 117, 255), ScreenWidth / 2, ScreenHeight - 125 - BLOCK_SIZE, ALLEGRO_ALIGN_CENTRE, "CREAR MARCIANO");
+
+    char alien_energy[10];
+    sprintf(alien_energy, "%d", energy_alien);
+    al_draw_text(stat, al_map_rgb(0, 255, 0), ScreenWidth / 4, ScreenHeight - 90 - BLOCK_SIZE, ALLEGRO_ALIGN_CENTRE, "ENERGIA");
+    al_draw_text(stat, al_map_rgb(0, 255, 0), ScreenWidth / 4, ScreenHeight - 70 - BLOCK_SIZE, ALLEGRO_ALIGN_CENTRE, "'E': AUMENTAR");
+    al_draw_text(stat, al_map_rgb(0, 255, 0), ScreenWidth / 4, ScreenHeight - 50 - BLOCK_SIZE, ALLEGRO_ALIGN_CENTRE, "'D': DISMINUIR");
+    al_draw_text(number, al_map_rgb(0, 255, 0), ScreenWidth / 4, ScreenHeight - 30 - BLOCK_SIZE, ALLEGRO_ALIGN_CENTRE, alien_energy);
+
+    char alien_regen[10];
+    sprintf(alien_regen, "%d", regen_alien);
+    al_draw_text(stat, al_map_rgb(255, 128, 0), 3 * ScreenWidth / 4, ScreenHeight - 90 - BLOCK_SIZE, ALLEGRO_ALIGN_CENTRE, "TIEMPO DE REGENERACION");
+    al_draw_text(stat, al_map_rgb(255, 128, 0), 3 * ScreenWidth / 4, ScreenHeight - 70 - BLOCK_SIZE, ALLEGRO_ALIGN_CENTRE, "'R': AUMENTAR");
+    al_draw_text(stat, al_map_rgb(255, 128, 0), 3 * ScreenWidth / 4, ScreenHeight - 50 - BLOCK_SIZE, ALLEGRO_ALIGN_CENTRE, "'F': DISMINUIR");
+    al_draw_text(number, al_map_rgb(255, 128, 0), 3 * ScreenWidth / 4, ScreenHeight - 30 - BLOCK_SIZE, ALLEGRO_ALIGN_CENTRE, alien_regen);
+
+    al_draw_text(stat, al_map_rgb(44, 117, 255), ScreenWidth / 2, ScreenHeight - 20 - BLOCK_SIZE, ALLEGRO_ALIGN_CENTRE, "'ENTER': CREAR");
 }
