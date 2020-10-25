@@ -1,11 +1,13 @@
 #include <time.h>
 #include <stdlib.h>
+#include <pthread.h>
 #include <allegro5/allegro5.h>
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_image.h>
 #include <allegro5/allegro_ttf.h>
 
 #include "createmap.c"
+#include "rms.c"
 
 #define ScreenWidth 830
 #define ScreenHeight 830 
@@ -14,22 +16,11 @@
 
 const float FPS = 30.0;
 const float animationFPS = 6.0;
-int alienCount = 0;
-
-typedef enum {UP = 3, DOWN = 0, LEFT = 1, RIGHT = 2} Direction;
-typedef struct Alien {
-    int id;
-    int x,y, sourceX;
-    Direction dir;
-    int isActive;
-    int energy;
-    int period;
-    int isFinished;
-    int regenerationTimer;
-} Alien;
 
 Wall* walls;
 Alien* aliens;
+
+pthread_mutex_t aliens_mutex[maxAliens];
 
 void drawWalls(ALLEGRO_BITMAP *wallSprite);
 void drawFlags(ALLEGRO_BITMAP *startFlagSprite, ALLEGRO_BITMAP *endFlagSprite);
@@ -45,13 +36,12 @@ void moveAlien();
 void updateEnergy();
 void updateRegenerationTimer();
 void draw_manual(ALLEGRO_FONT *subtitle, ALLEGRO_FONT *stat, ALLEGRO_FONT *number, int energy_alien, int regen_alien);
-void gamewindow();
+Alien* gamewindow();
 void updateReport(FILE *fptr);
 
-void gamewindow(int modeop, int algorithm) {
+Alien* gamewindow(int modeop, int algorithm) {
     int executionCounter = FPS;
     srand(time(NULL)); // Inicializacion para numeros random, solo debe llamarse una vez
-    createAlien(10, 10);
 
     int energy_alien = 1;
     int regen_alien = 1;
@@ -95,6 +85,9 @@ void gamewindow(int modeop, int algorithm) {
     al_start_timer(timer);
     al_start_timer(animationTimer);
 
+    int clk = 0;
+    rms(aliens, alienCount);
+    //updateRegenerationTimer();
     int gameLoop = 1;
     while(gameLoop)
     {
@@ -137,9 +130,11 @@ void gamewindow(int modeop, int algorithm) {
                 // Disminucion de niveles de energia
                 executionCounter -= 1;
                 if(executionCounter <= 0) {
+                    clk += 1;
                     updateReport(fptr);
                     updateEnergy();
                     updateRegenerationTimer();
+                    rms(aliens, alienCount);
                     executionCounter = FPS;
                 }
                 redraw = true;
@@ -154,6 +149,14 @@ void gamewindow(int modeop, int algorithm) {
         if(redraw && al_is_event_queue_empty(queue))
         {
             al_clear_to_color(al_map_rgb(0, 0, 0));
+            
+            int y = Y_OFFSET - 15;
+            int x = X_OFFSET + 22 * BLOCK_SIZE;
+            char num[5];
+            sprintf(num, "%d", clk);
+            al_draw_text(font, al_map_rgb(255, 255, 255), x, y, 0, num);
+
+
             if (modeop == 1) draw_manual(subtitle, stat, number, energy_alien, regen_alien);
             drawAliensInfo(font);
             drawWalls(wallSprite);
@@ -194,13 +197,22 @@ void createAlien(int period, int energy) {
     alien.y = flags[0].y; // Posicion en y del punto de partida
     alien.dir = DOWN;     // Direccion de movimiento inicial
     alien.sourceX = BLOCK_SIZE;
-    alien.isActive = 1;   // Estado de activiacion inicial
+    alien.isActive = 0;   // Estado de activiacion inicial
     alien.period = period;// Periodo del alien
     alien.energy = energy;// Energia del alien
     alien.isFinished = 0; // Estado de finalizacion no completado
     alien.regenerationTimer = 0;// Contador de tiempo de regeneracion
-    aliens[alienCount] = alien; // Se almacena en la lista de aliens
-    alienCount++;         // Aumenta contador de aliens
+    alien.energyCounter = energy; // Contador de energia
+    alien.isAvailable = 1;
+    aliens[alienCount] = alien;
+    
+    // Creacion de un mutex para el Alien
+    pthread_mutex_t alienmutex;
+    pthread_mutex_init(&alienmutex, NULL);
+    aliens_mutex[alienCount] = alienmutex;
+
+    // Aumentar contador de Aliens
+    alienCount++;
 }
 
 /**
@@ -230,7 +242,9 @@ void drawFlags(ALLEGRO_BITMAP *startFlagSprite, ALLEGRO_BITMAP *endFlagSprite) {
 **/
 void drawAliens(ALLEGRO_BITMAP *alienSprite) {
     for (int i = 0; i < alienCount; i++) {
+        pthread_mutex_lock(&aliens_mutex[i]);
         Alien alien = aliens[i];
+        pthread_mutex_unlock(&aliens_mutex[i]);
         if(!alien.isFinished){ // Se verifica que el alien no haya llegado a la meta
             al_draw_bitmap_region(alienSprite, alien.sourceX, alien.dir * BLOCK_SIZE, 
                                 BLOCK_SIZE, BLOCK_SIZE, alien.x, alien.y, 0);
@@ -247,11 +261,15 @@ void drawAliensInfo(ALLEGRO_FONT* font) {
 
     ALLEGRO_COLOR inactiveTextColor = al_map_rgb(255, 255, 255);
     ALLEGRO_COLOR activeTextColor = al_map_rgb(255, 0, 0);
+    ALLEGRO_COLOR finishedTextColor = al_map_rgb(0, 255, 0);
 
     for (int i = 0; i < alienCount; i++) {
+        pthread_mutex_lock(&aliens_mutex[i]);
         Alien alien = aliens[i];
+        pthread_mutex_unlock(&aliens_mutex[i]);
         ALLEGRO_COLOR textColor = inactiveTextColor;
         if(alien.isActive) textColor = activeTextColor;
+        else if (alien.isFinished) textColor = finishedTextColor;
 
         // Dibujado del identificador
         char id[20] = "";
@@ -263,7 +281,7 @@ void drawAliensInfo(ALLEGRO_FONT* font) {
         // Dibujado de la energia
         char energy[20] = "E: ";
         char energyValue[10];
-        sprintf(energyValue, "%d", alien.energy);
+        sprintf(energyValue, "%d", alien.energyCounter);
         strcat(energy, energyValue);
         al_draw_text(font, textColor, x + BLOCK_SIZE, y, 0, energy);
         
@@ -284,6 +302,7 @@ void drawAliensInfo(ALLEGRO_FONT* font) {
 **/
 void animateAliens() {
     for (int i = 0; i < alienCount; i++) {
+        pthread_mutex_lock(&aliens_mutex[i]);
         Alien *alien = &aliens[i];
         if(!alien->isFinished){ // Se verifica que el alien no haya llegado a la meta
             if(alien->isActive) { // Se verifica que el alien se encuentre en movimiento
@@ -295,6 +314,7 @@ void animateAliens() {
                 alien->sourceX = BLOCK_SIZE;
             }
         }
+        pthread_mutex_unlock(&aliens_mutex[i]);
     }
 }
 
@@ -303,6 +323,7 @@ void animateAliens() {
 **/
 void checkCollisions() {
     for (int i = 0; i < alienCount; i++) {
+        pthread_mutex_lock(&aliens_mutex[i]);
         Alien *alien = &aliens[i]; // Se obtiene un alien
 
         // Colisiones con los muros
@@ -320,9 +341,11 @@ void checkCollisions() {
         if (alien->isActive) {
             for (int j = 0; j < alienCount; j++) {
                 if(i != j) {
-                    Alien *alien2 = &aliens[j]; // Se obtiene un alien
+                    pthread_mutex_lock(&aliens_mutex[j]);
+                    Alien alien2 = aliens[j]; // Se obtiene un alien
+                    pthread_mutex_unlock(&aliens_mutex[j]);
                     // Se verifica si los aliens estan colisionando y si tienen la misma direccion
-                    if(isCollisioned(alien->x, alien2->x, alien->y, alien2->y) && alien->dir == alien2->dir){
+                    if(isCollisioned(alien->x, alien2.x, alien->y, alien2.y) && alien->dir == alien2.dir){
                         // Se restaura la posicion del alien
                         restorePosition(alien);
                         // Se calcula una nueva direccion para el Alien
@@ -339,6 +362,7 @@ void checkCollisions() {
             alien->x = 0;
             alien->y = 0;
         }
+        pthread_mutex_unlock(&aliens_mutex[i]);
     }
 }
 
@@ -400,6 +424,7 @@ void restorePosition(Alien* alien) {
 **/
 void moveAlien() {
     for(int i = 0; i < alienCount; i++) {
+        pthread_mutex_lock(&aliens_mutex[i]);
         Alien *alien = &aliens[i];
         // Se verifica que el Alien se encuentre activo
         if(alien->isActive) {
@@ -419,10 +444,12 @@ void moveAlien() {
             default:
                 break;
             }
+            // Como solo un Alien deberia moverse a la vez, se 
+            // hace un break para descartar los demas casos
+            pthread_mutex_unlock(&aliens_mutex[i]);
+            break;
         }
-        // Como solo un Alien deberia moverse a la vez, se 
-        // hace un break para descartar los demas casos
-        //break;
+        pthread_mutex_unlock(&aliens_mutex[i]);
     }
 }
 
@@ -431,19 +458,23 @@ void moveAlien() {
 **/
 void updateEnergy() {
     for(int i = 0; i < alienCount; i++) {
+        pthread_mutex_lock(&aliens_mutex[i]);
         Alien *alien = &aliens[i];
         // Se verifica que el Alien se encuentre activo
         if(alien->isActive) {
-            alien->energy -= 1;
+            alien->energyCounter -= 1;
             // Se verifica el nivel de energia del Alien
-            if(alien->energy <= 0) {
-                alien->isActive = 0;
-                alien->regenerationTimer = alien->period;
+            if(alien->energyCounter <= 0) {
+                //alien->isActive = 0;
+                alien->isAvailable = 0;
+                alien->energyCounter = alien->energy;
             }
             // Como solo un Alien deberia moverse a la vez, se 
             // hace un break para descartar los demas casos
+            pthread_mutex_unlock(&aliens_mutex[i]);
             break;
         }
+        pthread_mutex_unlock(&aliens_mutex[i]);
     }
 }
 
@@ -452,12 +483,20 @@ void updateEnergy() {
 **/
 void updateRegenerationTimer() {
     for(int i = 0; i < alienCount; i++) {
+        pthread_mutex_lock(&aliens_mutex[i]);
         Alien *alien = &aliens[i];
         // Se verifica que el Alien no se encuentre activo
-        if(!alien->isActive && alien->regenerationTimer > 0) {
+        //if(/*!alien->isActive &&*/ alien->regenerationTimer > 0) {
+        if(alien->regenerationTimer > 0) {
             // Se actualiza el contador de regeneracion del Alien
             alien->regenerationTimer -= 1;
+
+            if(alien->regenerationTimer == 0) {
+                alien->isAvailable = 1;
+                alien->regenerationTimer = alien->period;
+            }
         }
+        pthread_mutex_unlock(&aliens_mutex[i]);
     }
 }
 
@@ -489,7 +528,9 @@ void updateReport(FILE *fptr) {
     int id = 0;
     // Se obtiene el identificador del Alien activo
     for(int i = 0; i < alienCount; i++) {
+        pthread_mutex_lock(&aliens_mutex[i]);
         Alien alien = aliens[i];
+        pthread_mutex_unlock(&aliens_mutex[i]);
         if(alien.isActive) {
             id = alien.id;
             break;
