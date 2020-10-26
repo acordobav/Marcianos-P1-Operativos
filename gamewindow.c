@@ -210,7 +210,11 @@ void drawFlags(ALLEGRO_BITMAP *startFlagSprite, ALLEGRO_BITMAP *endFlagSprite) {
  * alienSprite: Sprite del alien
 **/
 void drawAliens(ALLEGRO_BITMAP *alienSprite) {
-    for (int i = 0; i < alienCount; i++) {
+    pthread_mutex_lock(&alienCountMutex);
+    int aliensCount = alienCount;
+    pthread_mutex_unlock(&alienCountMutex);
+
+    for (int i = 0; i < aliensCount; i++) {
         pthread_mutex_lock(&aliens_mutex[i]);
         Alien alien = aliens[i];
         pthread_mutex_unlock(&aliens_mutex[i]);
@@ -231,12 +235,18 @@ void drawAliensInfo(ALLEGRO_FONT* font) {
     ALLEGRO_COLOR inactiveTextColor = al_map_rgb(255, 255, 255);
     ALLEGRO_COLOR activeTextColor = al_map_rgb(255, 0, 0);
     ALLEGRO_COLOR finishedTextColor = al_map_rgb(0, 255, 0);
+    ALLEGRO_COLOR availableTextColor = al_map_rgb(255,255,0);
 
-    for (int i = 0; i < alienCount; i++) {
+    pthread_mutex_lock(&alienCountMutex);
+    int aliensCount = alienCount;
+    pthread_mutex_unlock(&alienCountMutex);
+    
+    for (int i = 0; i < aliensCount; i++) {
         pthread_mutex_lock(&aliens_mutex[i]);
         Alien alien = aliens[i];
         pthread_mutex_unlock(&aliens_mutex[i]);
         ALLEGRO_COLOR textColor = inactiveTextColor;
+        if(alien.isAvailable) textColor = availableTextColor;
         if(alien.isActive) textColor = activeTextColor;
         else if (alien.isFinished) textColor = finishedTextColor;
 
@@ -270,7 +280,11 @@ void drawAliensInfo(ALLEGRO_FONT* font) {
  * Funcion para realizar la animacion de caminata en los aliens
 **/
 void animateAliens() {
-    for (int i = 0; i < alienCount; i++) {
+    pthread_mutex_lock(&alienCountMutex);
+    int aliensCount = alienCount;
+    pthread_mutex_unlock(&alienCountMutex);
+
+    for (int i = 0; i < aliensCount; i++) {
         pthread_mutex_lock(&aliens_mutex[i]);
         Alien *alien = &aliens[i];
         if(!alien->isFinished){ // Se verifica que el alien no haya llegado a la meta
@@ -291,7 +305,11 @@ void animateAliens() {
  * Funcion para verificar si algun alien ha colisionado con otro objeto
 **/
 void checkCollisions() {
-    for (int i = 0; i < alienCount; i++) {
+    pthread_mutex_lock(&alienCountMutex);
+    int aliensCount = alienCount;
+    pthread_mutex_unlock(&alienCountMutex);
+
+    for (int i = 0; i < aliensCount; i++) {
         pthread_mutex_lock(&aliens_mutex[i]);
         Alien *alien = &aliens[i]; // Se obtiene un alien
 
@@ -308,7 +326,7 @@ void checkCollisions() {
 
         // Colisiones con otros Aliens
         if (alien->isActive) {
-            for (int j = 0; j < alienCount; j++) {
+            for (int j = 0; j < aliensCount; j++) {
                 if(i != j) {
                     pthread_mutex_lock(&aliens_mutex[j]);
                     Alien alien2 = aliens[j]; // Se obtiene un alien
@@ -392,7 +410,11 @@ void restorePosition(Alien* alien) {
  * Funcion para mover automaaticamente a los Aliens
 **/
 void moveAlien() {
-    for(int i = 0; i < alienCount; i++) {
+    pthread_mutex_lock(&alienCountMutex);
+    int aliensCount = alienCount;
+    pthread_mutex_unlock(&alienCountMutex);
+
+    for(int i = 0; i < aliensCount; i++) {
         pthread_mutex_lock(&aliens_mutex[i]);
         Alien *alien = &aliens[i];
         // Se verifica que el Alien se encuentre activo
@@ -447,9 +469,13 @@ void draw_manual(ALLEGRO_FONT *subtitle, ALLEGRO_FONT *stat, ALLEGRO_FONT *numbe
  * Funcion para escribir el reporte de ejecucion del algoritmo
 **/
 void updateReport(FILE *fptr) {
+    pthread_mutex_lock(&alienCountMutex);
+    int aliensCount = alienCount;
+    pthread_mutex_unlock(&alienCountMutex);
+
     int id = 0;
     // Se obtiene el identificador del Alien activo
-    for(int i = 0; i < alienCount; i++) {
+    for(int i = 0; i < aliensCount; i++) {
         pthread_mutex_lock(&aliens_mutex[i]);
         Alien alien = aliens[i];
         pthread_mutex_unlock(&aliens_mutex[i]);
