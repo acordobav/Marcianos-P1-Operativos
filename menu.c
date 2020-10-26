@@ -28,6 +28,7 @@ int main()
     aliens = (Alien*) malloc(sizeof(*aliens)*maxAliens);
     pthread_mutex_init(&clock_mutex, NULL);
     pthread_cond_init(&clock_cond, NULL);
+    pthread_mutex_init(&alienCountMutex, NULL);
 
     //Inicializar Allegro 5
     if(!al_init())
