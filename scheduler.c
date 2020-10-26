@@ -4,9 +4,14 @@
 pthread_t schedulerThread;
 
 void *rms();
+void checkSchedulingError();
 void updateReport(FILE *fptr);
 
+pthread_mutex_t schedulingErrorMutex;
+int schedulingError = 0;
+
 void scheduler(int algorithm) {
+    pthread_mutex_init(&schedulingErrorMutex, NULL);
     pthread_cond_init(&updatedCompleteCond, NULL);
     pthread_mutex_init(&updatedCompleteMutex, NULL);
     pthread_create(&schedulerThread, NULL, rms, NULL);
@@ -19,7 +24,14 @@ void *rms() {
     // Apertura del archivo de reporte
     FILE *fptr = fopen("report.txt","w");
 
-    while(1) {
+    pthread_mutex_lock(&gameLoopMutex);
+    int loop = gameLoop;
+    pthread_mutex_unlock(&gameLoopMutex);
+
+    while(loop) {
+        // Se verifica si hay un error de calendarizacion
+        checkSchedulingError();
+
         pthread_mutex_lock(&alienCountMutex);
         int aliensCount = alienCount;
         pthread_mutex_unlock(&alienCountMutex);
@@ -61,8 +73,36 @@ void *rms() {
         updatedCount = 0;
         pthread_mutex_unlock(&updatedCompleteMutex);
 
+        pthread_mutex_lock(&gameLoopMutex);
+        int loop = gameLoop;
+        pthread_mutex_unlock(&gameLoopMutex);
     }
     fclose(fptr);
+}
+
+/**
+ * Funcion que verifica si existe un error de calendarizacion
+**/
+void checkSchedulingError() {
+    pthread_mutex_lock(&alienCountMutex);
+    int aliensCount = alienCount;
+    pthread_mutex_unlock(&alienCountMutex);
+    
+    for (int i = 0; i < aliensCount; i++) {
+        // Se obtiene un Alien
+        pthread_mutex_lock(&aliens_mutex[i]);
+        Alien alien = aliens[i];
+        pthread_mutex_unlock(&aliens_mutex[i]);
+
+        // Si la energia es mayor a uno cuando queda solo un segundo para que se
+        // vuelva a regenerar, significa que no puede ser calendarizado
+        if(!alien.isFinished && alien.regenerationTimer == 1 && alien.energyCounter > 1) {
+            pthread_mutex_lock(&schedulingErrorMutex);
+            schedulingError = alien.id;
+            pthread_mutex_unlock(&schedulingErrorMutex);
+            break;
+        }
+    }
 }
 
 /**

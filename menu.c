@@ -31,6 +31,10 @@ int main()
     pthread_cond_init(&clock_cond, NULL);
     pthread_mutex_init(&alienCountMutex, NULL);
 
+    pthread_mutex_lock(&gameLoopMutex);
+    gameLoop = 1;
+    pthread_mutex_unlock(&gameLoopMutex);
+
     //Inicializar Allegro 5
     if(!al_init())
     {

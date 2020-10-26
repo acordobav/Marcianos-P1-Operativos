@@ -35,6 +35,9 @@ pthread_cond_t updatedCompleteCond;
 pthread_mutex_t updatedCompleteMutex;
 int updatedCount = 0;
 
+pthread_mutex_t gameLoopMutex;
+int gameLoop = 1;
+
 void *alienLoop(void* params);
 void updateEnergy(Alien* alien);
 void updateRegenerationTimer(Alien* alien);
@@ -84,17 +87,28 @@ int createAlien(int period, int energy) {
     return alien.id;
 }
 
+/**
+ * Funcion con el flujo de ejecucion de los hilos
+ * params: puntero a el Alien que debe controlar el hilo
+**/ 
 void *alienLoop(void* params){
     Alien *alien = (Alien*) params;
     
+    // Variable que controla los frames
     pthread_mutex_lock(&clock_mutex);
     int internalFrameControl = frameControl;
     pthread_mutex_unlock(&clock_mutex);
 
+    // Temporizador para la actualizacion de energia y animacion
     int executionCounter = gameFPS;
     int animationCounter = 0;
     
-    while(1) {
+    // Variable de la condicion de parada del hilo
+    pthread_mutex_lock(&gameLoopMutex);
+    int loop = gameLoop;
+    pthread_mutex_unlock(&gameLoopMutex);
+
+    while(loop) {
         // Se espera a recibir un cambio del clock
         pthread_mutex_lock(&clock_mutex);
         while (internalFrameControl == frameControl) {
@@ -118,7 +132,7 @@ void *alienLoop(void* params){
 
         // Se actualizan niveles de energia cada segundo
         executionCounter--;
-        if(executionCounter <= 0) {
+        if(executionCounter <= 0 && !alien->isFinished) {
             // Actualizacion de niveles de energia
             updateEnergy(alien);
             updateRegenerationTimer(alien);
@@ -131,6 +145,11 @@ void *alienLoop(void* params){
             // Restablecimiento del contador
             executionCounter = gameFPS;
         }
+
+        // Actualizacion de la condicion del while
+        pthread_mutex_lock(&gameLoopMutex);
+        int loop = gameLoop;
+        pthread_mutex_unlock(&gameLoopMutex);
     }
 }
 

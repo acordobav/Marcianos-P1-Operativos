@@ -19,12 +19,14 @@ void drawFlags(ALLEGRO_BITMAP *startFlagSprite, ALLEGRO_BITMAP *endFlagSprite);
 void drawAliens(ALLEGRO_BITMAP *alienSprite);
 void drawAliensInfo(ALLEGRO_FONT* font);
 void draw_manual(ALLEGRO_FONT *subtitle, ALLEGRO_FONT *stat, ALLEGRO_FONT *number, int energy_alien, int regen_alien);
+void stopGame();
 Alien* gamewindow();
 
 Alien* gamewindow(int modeop, int algorithm) {
     int executionCounter = FPS;
     int energy_alien = 1;
     int regen_alien = 1;
+    pthread_mutex_init(&gameLoopMutex, NULL);
 
     // Inicio interfaz grafica
     al_init();
@@ -59,9 +61,12 @@ Alien* gamewindow(int modeop, int algorithm) {
     ALLEGRO_EVENT event;
 
     al_start_timer(timer);
-
     scheduler(algorithm);
-    int gameLoop = 1;
+
+    pthread_mutex_lock(&gameLoopMutex);
+    gameLoop = 1;
+    pthread_mutex_unlock(&gameLoopMutex);
+
     while(gameLoop)
     {
         al_wait_for_event(queue, &event);
@@ -71,7 +76,7 @@ Alien* gamewindow(int modeop, int algorithm) {
             switch (event.keyboard.keycode) {
                 case ALLEGRO_KEY_X:
                     // Detener juego 
-                    gameLoop = 0;
+                    stopGame();
                     break;
                 case ALLEGRO_KEY_E:
                     // Aumentar energia nuevo Alien
@@ -115,6 +120,15 @@ Alien* gamewindow(int modeop, int algorithm) {
                 if(executionCounter <= 0) {
                     executionCounter = FPS;
                     clk++; // Aumentar contador de tiempo
+
+                    //Verificacion de error de calendarizacion
+                    pthread_mutex_lock(&schedulingErrorMutex);
+                    int schError = schedulingError;
+                    pthread_mutex_unlock(&schedulingErrorMutex);
+
+                    if(schError != 0) {
+                        stopGame();
+                    }
                 }
                 redraw = true;
             }
@@ -269,4 +283,10 @@ void draw_manual(ALLEGRO_FONT *subtitle, ALLEGRO_FONT *stat, ALLEGRO_FONT *numbe
     al_draw_text(number, al_map_rgb(255, 128, 0), 3 * ScreenWidth / 4, ScreenHeight - 30 - BLOCK_SIZE, ALLEGRO_ALIGN_CENTRE, alien_regen);
 
     al_draw_text(stat, al_map_rgb(44, 117, 255), ScreenWidth / 2, ScreenHeight - 20 - BLOCK_SIZE, ALLEGRO_ALIGN_CENTRE, "'ENTER': CREAR");
+}
+
+void stopGame(){ 
+    pthread_mutex_lock(&gameLoopMutex);
+    gameLoop = 0;
+    pthread_mutex_unlock(&gameLoopMutex);
 }
