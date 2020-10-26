@@ -5,6 +5,7 @@
 #define maxAliens 30
 #define moveSpeed 4
 #define gameFPS 30
+#define animationFPS 6
 
 typedef enum {UP = 3, DOWN = 0, LEFT = 1, RIGHT = 2} Direction;
 typedef struct Alien {
@@ -43,6 +44,7 @@ void checkCollisions(Alien* alien);
 void restorePosition(Alien* alien);
 void restorePosition(Alien* alien);
 void getNewDirection(Alien* alien);
+void animateAlien(Alien* alien);
 
 int frameControl = 0;
 
@@ -90,6 +92,7 @@ void *alienLoop(void* params){
     pthread_mutex_unlock(&clock_mutex);
 
     int executionCounter = gameFPS;
+    int animationCounter = 0;
     
     while(1) {
         // Se espera a recibir un cambio del clock
@@ -100,9 +103,18 @@ void *alienLoop(void* params){
         internalFrameControl = frameControl;
         pthread_mutex_unlock(&clock_mutex);
         
+        animationCounter++;
         // Se mueve el Alien si se encuentra activo
-        moveAlien(alien);
-        checkCollisions(alien);
+        if(alien->isActive && !alien->isFinished) {
+            moveAlien(alien);
+            checkCollisions(alien);
+
+            // Actualizacion de la animacion
+            if(animationCounter >= animationFPS) {
+                animationCounter = 0;
+                animateAlien(alien);
+            }
+        }
 
         // Se actualizan niveles de energia cada segundo
         executionCounter--;
@@ -119,9 +131,6 @@ void *alienLoop(void* params){
             // Restablecimiento del contador
             executionCounter = gameFPS;
         }
-
-
-
     }
 }
 
@@ -167,23 +176,21 @@ void updateRegenerationTimer(Alien* alien) {
 void moveAlien(Alien* alien) {
     pthread_mutex_lock(&aliens_mutex[alien->id-1]);
     // Se verifica que el Alien se encuentre activo
-    if(alien->isActive) {
-        switch (alien->dir) {
-        case DOWN:
-            alien->y += moveSpeed;
-            break;
-        case UP:
-            alien->y -= moveSpeed;
-            break; 
-        case RIGHT:
-            alien->x += moveSpeed;
-            break;
-        case LEFT:
-            alien->x -= moveSpeed;
-            break;
-        default:
-            break;
-        }
+    switch (alien->dir) {
+    case DOWN:
+        alien->y += moveSpeed;
+        break;
+    case UP:
+        alien->y -= moveSpeed;
+        break; 
+    case RIGHT:
+        alien->x += moveSpeed;
+        break;
+    case LEFT:
+        alien->x -= moveSpeed;
+        break;
+    default:
+        break;
     }
     pthread_mutex_unlock(&aliens_mutex[alien->id-1]);
 }
@@ -208,46 +215,44 @@ bool isCollisioned(int x1, int x2, int y1, int y2) {
 **/
 void checkCollisions(Alien* alien) {
     pthread_mutex_lock(&aliens_mutex[alien->id-1]);
-    if (alien->isActive) {
-        // Colisiones con los muros
-        for (int j = 0; j < wallCounter; j++) {
-            Wall wall = walls[j]; // Se obtiene un muro
-            if(isCollisioned(alien->x, wall.x, alien->y, wall.y)){
+    // Colisiones con los muros
+    for (int j = 0; j < wallCounter; j++) {
+        Wall wall = walls[j]; // Se obtiene un muro
+        if(isCollisioned(alien->x, wall.x, alien->y, wall.y)){
+            // Se restaura la posicion del alien
+            restorePosition(alien);
+            // Se calcula una nueva direccion para el Alien
+            getNewDirection(alien);
+        }
+    }
+
+    pthread_mutex_lock(&alienCountMutex);
+    int aliensCount = alienCount;
+    pthread_mutex_unlock(&alienCountMutex);
+    
+    // Colisiones con otros Aliens
+    for (int j = 0; j < aliensCount; j++) {
+        if(alien->id != j+1) {
+            pthread_mutex_lock(&aliens_mutex[j]);
+            Alien alien2 = aliens[j]; // Se obtiene un alien
+            pthread_mutex_unlock(&aliens_mutex[j]);
+
+            // Se verifica si los aliens estan colisionando y si tienen la misma direccion
+            if(isCollisioned(alien->x, alien2.x, alien->y, alien2.y) && alien->dir == alien2.dir){
                 // Se restaura la posicion del alien
                 restorePosition(alien);
                 // Se calcula una nueva direccion para el Alien
                 getNewDirection(alien);
             }
         }
-
-        pthread_mutex_lock(&alienCountMutex);
-        int aliensCount = alienCount;
-        pthread_mutex_unlock(&alienCountMutex);
-        
-        // Colisiones con otros Aliens
-        for (int j = 0; j < aliensCount; j++) {
-            if(alien->id != j+1) {
-                pthread_mutex_lock(&aliens_mutex[j]);
-                Alien alien2 = aliens[j]; // Se obtiene un alien
-                pthread_mutex_unlock(&aliens_mutex[j]);
-
-                // Se verifica si los aliens estan colisionando y si tienen la misma direccion
-                if(isCollisioned(alien->x, alien2.x, alien->y, alien2.y) && alien->dir == alien2.dir){
-                    // Se restaura la posicion del alien
-                    restorePosition(alien);
-                    // Se calcula una nueva direccion para el Alien
-                    getNewDirection(alien);
-                }
-            }
-        }
-        // Verificacion de llegada a la meta, colision con la bandera de finalizacion
-        if(isCollisioned(alien->x, flags[1].x, alien->y, flags[1].y)) {
-            alien->isActive = 0;
-            alien->isFinished = 1;
-            alien->isAvailable = 0;
-            alien->x = 0;
-            alien->y = 0;
-        }
+    }
+    // Verificacion de llegada a la meta, colision con la bandera de finalizacion
+    if(isCollisioned(alien->x, flags[1].x, alien->y, flags[1].y)) {
+        alien->isActive = 0;     // Se desactiva el Alien
+        alien->isFinished = 1;   // Se indica que llego a la meta
+        alien->isAvailable = 0;  // Se indica que no se encuentra disponible
+        alien->x = 0;
+        alien->y = 0;
     }
     pthread_mutex_unlock(&aliens_mutex[alien->id-1]);
 }
@@ -288,4 +293,16 @@ void restorePosition(Alien* alien) {
             alien->x -= moveSpeed;
         }
     }
+}
+
+/**
+ * Funcion para realizar la animacion de caminata en los aliens
+**/
+void animateAlien(Alien* alien) {
+    pthread_mutex_lock(&aliens_mutex[alien->id-1]);
+    alien->sourceX += BLOCK_SIZE;
+    if(alien->sourceX >= BLOCK_SIZE*3) {
+        alien->sourceX = 0;
+    }
+    pthread_mutex_unlock(&aliens_mutex[alien->id-1]);
 }

@@ -12,14 +12,12 @@
 #define ScreenHeight 830 
 
 const float FPS = 30.0;
-const float animationFPS = 6.0;
 long int clk = 0;
 
 void drawWalls(ALLEGRO_BITMAP *wallSprite);
 void drawFlags(ALLEGRO_BITMAP *startFlagSprite, ALLEGRO_BITMAP *endFlagSprite);
 void drawAliens(ALLEGRO_BITMAP *alienSprite);
 void drawAliensInfo(ALLEGRO_FONT* font);
-void animateAliens();
 void draw_manual(ALLEGRO_FONT *subtitle, ALLEGRO_FONT *stat, ALLEGRO_FONT *number, int energy_alien, int regen_alien);
 Alien* gamewindow();
 //void updateReport(FILE *fptr);
@@ -48,7 +46,6 @@ Alien* gamewindow(int modeop, int algorithm) {
     ALLEGRO_BITMAP *alienSprite = al_load_bitmap("sprites/alien.png");
 
     ALLEGRO_TIMER* timer = al_create_timer(1.0 / FPS);
-    ALLEGRO_TIMER* animationTimer = al_create_timer(1.0 / animationFPS);
     ALLEGRO_EVENT_QUEUE* queue = al_create_event_queue();
     ALLEGRO_DISPLAY* disp = al_create_display(ScreenWidth, ScreenHeight);
     al_set_window_title(disp, "Proyecto 1 PSO - Simulacion");
@@ -58,7 +55,6 @@ Alien* gamewindow(int modeop, int algorithm) {
     al_register_event_source(queue, al_get_keyboard_event_source());
     al_register_event_source(queue, al_get_display_event_source(disp));
     al_register_event_source(queue, al_get_timer_event_source(timer));
-    al_register_event_source(queue, al_get_timer_event_source(animationTimer));
 
     ALLEGRO_FONT *subtitle = al_load_ttf_font("Orbitron-Bold.ttf", 22, ALLEGRO_TTF_MONOCHROME);
     ALLEGRO_FONT *stat = al_load_ttf_font("Orbitron-Bold.ttf", 16, ALLEGRO_TTF_MONOCHROME);
@@ -68,7 +64,6 @@ Alien* gamewindow(int modeop, int algorithm) {
     ALLEGRO_EVENT event;
 
     al_start_timer(timer);
-    al_start_timer(animationTimer);
 
     scheduler(algorithm);
     //updateRegenerationTimer();
@@ -130,8 +125,6 @@ Alien* gamewindow(int modeop, int algorithm) {
                     //updateReport(fptr);
                 }
                 redraw = true;
-            } else if(event.timer.source == animationTimer){
-                animateAliens();
             }
         }
         else if(event.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
@@ -165,7 +158,6 @@ Alien* gamewindow(int modeop, int algorithm) {
     al_destroy_font(number);
     al_destroy_display(disp);
     al_destroy_timer(timer);
-    al_destroy_timer(animationTimer);
     al_destroy_event_queue(queue);
     al_destroy_bitmap(wallSprite);
     al_destroy_bitmap(startFlagSprite);
@@ -265,31 +257,6 @@ void drawAliensInfo(ALLEGRO_FONT* font) {
     }
 
 
-}
-
-/**
- * Funcion para realizar la animacion de caminata en los aliens
-**/
-void animateAliens() {
-    pthread_mutex_lock(&alienCountMutex);
-    int aliensCount = alienCount;
-    pthread_mutex_unlock(&alienCountMutex);
-
-    for (int i = 0; i < aliensCount; i++) {
-        pthread_mutex_lock(&aliens_mutex[i]);
-        Alien *alien = &aliens[i];
-        if(!alien->isFinished){ // Se verifica que el alien no haya llegado a la meta
-            if(alien->isActive) { // Se verifica que el alien se encuentre en movimiento
-                alien->sourceX += BLOCK_SIZE;
-                if(alien->sourceX >= BLOCK_SIZE*3) {
-                    alien->sourceX = 0;
-                }
-            } else {
-                alien->sourceX = BLOCK_SIZE;
-            }
-        }
-        pthread_mutex_unlock(&aliens_mutex[i]);
-    }
 }
 
 void draw_manual(ALLEGRO_FONT *subtitle, ALLEGRO_FONT *stat, ALLEGRO_FONT *number, int energy_alien, int regen_alien)
