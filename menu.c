@@ -203,10 +203,12 @@ int main()
                     break;
                 case ALLEGRO_KEY_SPACE:
                     //Funcion crear marciano
-                    createAlien(regen_alien, energy_alien, flags[0].x, flags[0].y, BLOCK_SIZE);
-                    num_alien += 1;
-                    energy_alien = 1;
-                    regen_alien = 1;
+                    if(energy_alien < regen_alien) {
+                        createAlien(regen_alien, energy_alien);
+                        num_alien += 1;
+                        energy_alien = 1;
+                        regen_alien = 1;
+                    }
                     break;
                 case ALLEGRO_KEY_ENTER:
                     autom = true;

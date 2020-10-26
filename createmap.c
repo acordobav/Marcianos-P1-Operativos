@@ -6,13 +6,15 @@
 #define Y_OFFSET 30
 #define BLOCK_SIZE 30
 
+
 struct Flag{
     int x, y;
 };
-struct Wall{
+typedef struct Wall{
     int x, y;  // Posicion en los ejes "x" y "y"
-};
-typedef struct Wall Wall;
+} Wall;
+
+Wall* walls; // Lista con los muros
 
 char* readFile(char* filename);
 int countWalls(int** map, int rows, int columns);
@@ -77,7 +79,7 @@ Wall* createMap() {
     flags[1] = endFlag;
     
     // Se construye una lista con todos los muros del laberinto
-    struct Wall *walls = malloc(sizeof(*walls)*totalWalls);
+    walls = malloc(sizeof(*walls)*totalWalls);
     wallCounter = 0;
     for (int i = 0; i < rows; i++) {
         for (int j = 0; j < columns; j++) {    
