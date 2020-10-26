@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <pthread.h>
 
 #include "gamewindow.c"
 
@@ -23,8 +24,10 @@ void draw_autom(ALLEGRO_FONT *subtitle, ALLEGRO_FONT *stat, ALLEGRO_FONT *number
 
 int main()
 {   
-    aliens = (Alien*) malloc(sizeof(*aliens)*maxAliens);
     walls = createMap();
+    aliens = (Alien*) malloc(sizeof(*aliens)*maxAliens);
+    pthread_mutex_init(&clock_mutex, NULL);
+    pthread_cond_init(&clock_cond, NULL);
 
     //Inicializar Allegro 5
     if(!al_init())
@@ -199,7 +202,7 @@ int main()
                     break;
                 case ALLEGRO_KEY_SPACE:
                     //Funcion crear marciano
-                    createAlien(regen_alien, energy_alien);
+                    createAlien(regen_alien, energy_alien, flags[0].x, flags[0].y, BLOCK_SIZE);
                     num_alien += 1;
                     energy_alien = 1;
                     regen_alien = 1;
