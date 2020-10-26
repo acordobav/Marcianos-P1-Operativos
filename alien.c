@@ -17,7 +17,9 @@ typedef struct Alien {
     int energyCounter;
     int isAvailable;
 } Alien;
+
 int alienCount = 0;
+pthread_mutex_t alienCountMutex;
 
 Alien* aliens;
 pthread_mutex_t aliens_mutex[maxAliens];
@@ -27,15 +29,14 @@ pthread_cond_t clock_cond;
 pthread_mutex_t clock_mutex;
 long int clk = 0;
 
+pthread_cond_t updatedCompleteCond;
+pthread_mutex_t updatedCompleteMutex;
+int updatedCount = 0;
+
 void *alienLoop(void* params);
 void updateEnergy(Alien* alien);
 void updateRegenerationTimer(Alien* alien);
 
-/**
- * Funcion para crear un alien nuevo y agregarlo a la lista
- * period: Periodo que debe tener el nuevo alien
- * energy: Energia que debe tener el nuevo alien
-**/ 
 /**
  * Funcion para crear un alien nuevo y agregarlo a la lista
  * period: Periodo que debe tener el nuevo alien
@@ -57,7 +58,6 @@ int createAlien(int period, int energy, int x, int y, int sourceX) {
     alien.isAvailable = 1;
     aliens[alienCount] = alien;
     
-    
     // Creacion de un mutex para el Alien
     pthread_mutex_t alienmutex;
     pthread_mutex_init(&alienmutex, NULL);
@@ -67,7 +67,9 @@ int createAlien(int period, int energy, int x, int y, int sourceX) {
     pthread_create(&threads_id[alienCount], NULL, alienLoop, &aliens[alienCount]);
     
     // Aumentar contador de Aliens
+    pthread_mutex_lock(&alienCountMutex);
     alienCount++;
+    pthread_mutex_unlock(&alienCountMutex);
     return alien.id;
 }
 
@@ -83,14 +85,18 @@ void *alienLoop(void* params){
         pthread_mutex_lock(&clock_mutex);
         while (clkCounter != clk) {
             pthread_cond_wait(&clock_cond, &clock_mutex);
-            //printf("counter: %ld - clk: %ld\n", clkCounter, clk);
         }
         pthread_mutex_unlock(&clock_mutex);
 
         clkCounter++; // Aumentar contador de tiempo
-        //printf("%d\n", alien->id);
         updateEnergy(alien);
         updateRegenerationTimer(alien);
+
+        // Se actualiza el contador de Aliens actualizados
+        pthread_mutex_lock(&updatedCompleteMutex);
+        updatedCount++;
+        pthread_mutex_unlock(&updatedCompleteMutex);
+        pthread_cond_broadcast(&updatedCompleteCond);
     }
 }
 
@@ -103,7 +109,10 @@ void updateEnergy(Alien* alien) {
     if(alien->isActive) {
         // Se verifica el nivel de energia del Alien
         if(alien->energyCounter > 0) alien->energyCounter -= 1;
-        if(alien->energyCounter == 0) alien->isActive = 0;
+        if(alien->energyCounter == 0) {
+            alien->isActive = 0;
+            alien->isAvailable = 0;
+        }
     }
     pthread_mutex_unlock(&aliens_mutex[alien->id-1]);
 }
