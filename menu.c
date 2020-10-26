@@ -24,6 +24,7 @@ void draw_autom(ALLEGRO_FONT *subtitle, ALLEGRO_FONT *stat, ALLEGRO_FONT *number
 
 int main()
 {   
+    srand(time(NULL)); // Inicializacion para numeros random, solo debe llamarse una vez
     walls = createMap();
     aliens = (Alien*) malloc(sizeof(*aliens)*maxAliens);
     pthread_mutex_init(&clock_mutex, NULL);

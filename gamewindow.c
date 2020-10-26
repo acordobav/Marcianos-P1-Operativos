@@ -20,16 +20,11 @@ void drawAliens(ALLEGRO_BITMAP *alienSprite);
 void drawAliensInfo(ALLEGRO_FONT* font);
 void draw_manual(ALLEGRO_FONT *subtitle, ALLEGRO_FONT *stat, ALLEGRO_FONT *number, int energy_alien, int regen_alien);
 Alien* gamewindow();
-//void updateReport(FILE *fptr);
 
 Alien* gamewindow(int modeop, int algorithm) {
     int executionCounter = FPS;
-    srand(time(NULL)); // Inicializacion para numeros random, solo debe llamarse una vez
-
     int energy_alien = 1;
     int regen_alien = 1;
-
-    //FILE *fptr = fopen("report.txt","w");
 
     // Inicio interfaz grafica
     al_init();
@@ -66,7 +61,6 @@ Alien* gamewindow(int modeop, int algorithm) {
     al_start_timer(timer);
 
     scheduler(algorithm);
-    //updateRegenerationTimer();
     int gameLoop = 1;
     while(gameLoop)
     {
@@ -110,7 +104,8 @@ Alien* gamewindow(int modeop, int algorithm) {
             }
         } else if(event.type == ALLEGRO_EVENT_TIMER){
             if(event.timer.source == timer) {
-
+                
+                // Indicar a los hilos de un nuevo frame
                 pthread_mutex_lock(&clock_mutex);
                 frameControl = !frameControl;
                 pthread_cond_broadcast(&clock_cond);
@@ -119,19 +114,14 @@ Alien* gamewindow(int modeop, int algorithm) {
                 executionCounter -= 1;
                 if(executionCounter <= 0) {
                     executionCounter = FPS;
-                    // Aumentar contador de tiempo
-                    clk++;
-                    // Actualizacion de reporte
-                    //updateReport(fptr);
+                    clk++; // Aumentar contador de tiempo
                 }
                 redraw = true;
             }
-        }
-        else if(event.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
+        } else if(event.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
             break;
 
-        if(redraw && al_is_event_queue_empty(queue))
-        {
+        if(redraw && al_is_event_queue_empty(queue)) {
             al_clear_to_color(al_map_rgb(0, 0, 0));
             
             int y = Y_OFFSET - 15;
@@ -151,7 +141,6 @@ Alien* gamewindow(int modeop, int algorithm) {
             redraw = false;
         }
     }
-
     al_destroy_font(font);
     al_destroy_font(subtitle);
     al_destroy_font(stat);
@@ -228,6 +217,7 @@ void drawAliensInfo(ALLEGRO_FONT* font) {
         pthread_mutex_lock(&aliens_mutex[i]);
         Alien alien = aliens[i];
         pthread_mutex_unlock(&aliens_mutex[i]);
+
         ALLEGRO_COLOR textColor = inactiveTextColor;
         if(alien.isAvailable) textColor = availableTextColor;
         if(alien.isActive) textColor = activeTextColor;
@@ -255,10 +245,11 @@ void drawAliensInfo(ALLEGRO_FONT* font) {
         al_draw_text(font, textColor, x + BLOCK_SIZE * 3, y, 0, regeneration);
         y += BLOCK_SIZE / 2;
     }
-
-
 }
 
+/**
+ * Funcion para dibuar el texto del modo manual en pantalla
+**/
 void draw_manual(ALLEGRO_FONT *subtitle, ALLEGRO_FONT *stat, ALLEGRO_FONT *number, int energy_alien, int regen_alien)
 {
     al_draw_text(subtitle, al_map_rgb(44, 117, 255), ScreenWidth / 2, ScreenHeight - 125 - BLOCK_SIZE, ALLEGRO_ALIGN_CENTRE, "CREAR MARCIANO");

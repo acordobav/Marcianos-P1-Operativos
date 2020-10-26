@@ -12,7 +12,11 @@ void scheduler(int algorithm) {
     pthread_create(&schedulerThread, NULL, rms, NULL);
 }
 
-void *rms(void* args) {
+/**
+ * Funcion que implementa el algoritmo de calendarizacion de procesos RMS
+**/
+void *rms() {
+    // Apertura del archivo de reporte
     FILE *fptr = fopen("report.txt","w");
 
     while(1) {
@@ -61,6 +65,9 @@ void *rms(void* args) {
     fclose(fptr);
 }
 
+/**
+ * Funcion para actualizar el reporte de calendarizacion
+**/
 void updateReport(FILE *fptr) {
     pthread_mutex_lock(&alienCountMutex);
     int aliensCount = alienCount;
