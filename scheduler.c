@@ -64,7 +64,7 @@ void *rms() {
         }
 
         // Se actualiza el reporte
-        updateReport(fptr);
+        if (aliensCount > 0) updateReport(fptr);
 
         // Se espera a que todos los Aliens se actualicen en el siguiente clk
         pthread_mutex_lock(&updatedCompleteMutex);
@@ -128,7 +128,7 @@ void *edf()
         }
 
         // Se actualiza el reporte
-        updateReport(fptr);
+        if (aliensCount > 0) updateReport(fptr);
 
         // Se espera a que todos los Aliens se actualicen en el siguiente clk
         pthread_mutex_lock(&updatedCompleteMutex);
