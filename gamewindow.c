@@ -20,6 +20,8 @@ void drawAliens(ALLEGRO_BITMAP *alienSprite);
 void drawAliensInfo(ALLEGRO_FONT* font);
 void draw_manual(ALLEGRO_FONT *subtitle, ALLEGRO_FONT *stat, ALLEGRO_FONT *number, int energy_alien, int regen_alien);
 void stopGame();
+int error(ALLEGRO_DISPLAY *display, int alien_id, int alien_energy, int alien_period);
+
 Alien* gamewindow();
 
 Alien* gamewindow(int modeop, int algorithm) {
@@ -66,6 +68,8 @@ Alien* gamewindow(int modeop, int algorithm) {
     pthread_mutex_lock(&gameLoopMutex);
     gameLoop = 1;
     pthread_mutex_unlock(&gameLoopMutex);
+
+    int schError = 0;
 
     while(gameLoop)
     {
@@ -123,7 +127,7 @@ Alien* gamewindow(int modeop, int algorithm) {
 
                     //Verificacion de error de calendarizacion
                     pthread_mutex_lock(&schedulingErrorMutex);
-                    int schError = schedulingError;
+                    schError = schedulingError;
                     pthread_mutex_unlock(&schedulingErrorMutex);
 
                     if(schError != 0) {
@@ -155,6 +159,17 @@ Alien* gamewindow(int modeop, int algorithm) {
             redraw = false;
         }
     }
+    //Verificacion de error de calendarizacion
+    pthread_mutex_lock(&schedulingErrorMutex);
+    schError = schedulingError;
+    pthread_mutex_unlock(&schedulingErrorMutex);
+    int value = 0;
+    if(schError != 0) {
+        pthread_mutex_lock(&aliens_mutex[schedulingError-1]);
+        Alien alien = aliens[schedulingError-1];
+        pthread_mutex_unlock(&aliens_mutex[schedulingError-1]);
+        value = error(disp, alien.id, alien.energy, alien.period);
+    }
     al_destroy_font(font);
     al_destroy_font(subtitle);
     al_destroy_font(stat);
@@ -168,6 +183,8 @@ Alien* gamewindow(int modeop, int algorithm) {
     al_destroy_bitmap(alienSprite);
 
     free(walls);
+
+    
 }
 
 /**
@@ -289,4 +306,31 @@ void stopGame(){
     pthread_mutex_lock(&gameLoopMutex);
     gameLoop = 0;
     pthread_mutex_unlock(&gameLoopMutex);
+}
+
+/**
+ * Funcion que abre la pantalla de error de calendarizacion
+**/
+int error(ALLEGRO_DISPLAY *display, int alien_id, int alien_energy, int alien_period)
+{   
+    char id[10];
+    char energy[10];
+    char period[10];
+    sprintf(id, "%d", alien_id);
+    sprintf(energy, "%d", alien_energy);
+    sprintf(period, "%d", alien_period);
+
+    char error[100] = "Error de Calendarizacion";
+    char text[100] = "Error Marciano ";
+    strcat(text, id);
+    strcat(text, "\n\nEnergia = ");
+    strcat(text, energy);
+    strcat(text, "\nTiempo de Regeneracion = ");
+    strcat(text, period);
+    char question[100] = "\n\nDesear observar el reporte del programa?";
+    strcat(text, question);
+
+
+    int respond = al_show_native_message_box(display, "Error", error, text, NULL, ALLEGRO_MESSAGEBOX_ERROR | ALLEGRO_MESSAGEBOX_YES_NO);
+    return respond;
 }

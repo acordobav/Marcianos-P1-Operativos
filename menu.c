@@ -22,9 +22,6 @@ void draw_algor(ALLEGRO_FONT *title, ALLEGRO_FONT *select, ALLEGRO_BITMAP *stars
 void draw_manual(ALLEGRO_FONT *subtitle, ALLEGRO_FONT *stat, ALLEGRO_FONT *number, int energy_alien, int regen_alien);
 void draw_autom(ALLEGRO_FONT *subtitle, ALLEGRO_FONT *stat, ALLEGRO_FONT *number, ALLEGRO_BITMAP *stars, int num_alien, int energy_alien, int regen_alien);
 
-void error(ALLEGRO_DISPLAY *display, int alien_id, int alien_energy, int alien_period);
-
-
 int main()
 {   
     srand(time(NULL)); // Inicializacion para numeros random, solo debe llamarse una vez
@@ -45,13 +42,14 @@ int main()
         exit(1);
     }
 
+
     //Crear el display para el menu
     ALLEGRO_DISPLAY *display = al_create_display(SCREENWIDTH, SCREENHEIGHT);
     al_set_window_position(display, 200, 100);
     al_set_window_title(display, "Proyecto 1 PSO");
 
     //Prueba
-    error(display, 1, 1, 1);
+    //error(display, 1, 1, 1);
 
     if(!display)
     {
@@ -292,36 +290,4 @@ void draw_autom(ALLEGRO_FONT *subtitle, ALLEGRO_FONT *stat, ALLEGRO_FONT *number
     al_draw_text(stat, al_map_rgb(44, 117, 255), SCREENWIDTH / 2, (3 * SCREENHEIGHT / 4) + 20, ALLEGRO_ALIGN_CENTRE, "SIGUIENTE MARCIANO: 'ESPACIO'");
     al_draw_text(stat, al_map_rgb(44, 117, 255), SCREENWIDTH / 2, (3 * SCREENHEIGHT / 4) + 40, ALLEGRO_ALIGN_CENTRE, "INICIAR SIMULACION: 'ENTER'");
     al_flip_display();
-}
-
-//Funcion que abre la pantalla de error de calendarizacion
-void error(ALLEGRO_DISPLAY *display, int alien_id, int alien_energy, int alien_period)
-{   
-    char id[10];
-    char energy[10];
-    char period[10];
-    sprintf(id, "%d", alien_id);
-    sprintf(energy, "%d", alien_energy);
-    sprintf(period, "%d", alien_period);
-
-    char error[100] = "Error de Calendarizacion";
-    char text[100] = "Error Marciano ";
-    strcat(text, id);
-    strcat(text, "\n\nEnergia = ");
-    strcat(text, energy);
-    strcat(text, "\nTiempo de Regeneracion = ");
-    strcat(text, period);
-    char question[100] = "\n\nDesear observar el reporte del programa?";
-    strcat(text, question);
-
-
-    int respond = al_show_native_message_box(display, "Error", error, text, NULL, ALLEGRO_MESSAGEBOX_ERROR | ALLEGRO_MESSAGEBOX_YES_NO);
-    if (respond == 1)
-    {
-        //Terminar el while del juego
-    }
-    else
-    {
-        exit(1);
-    }
 }

@@ -4,6 +4,7 @@
 pthread_t schedulerThread;
 
 void *rms();
+void *edf();
 void checkSchedulingError();
 void updateReport(FILE *fptr);
 
@@ -14,7 +15,7 @@ void scheduler(int algorithm) {
     pthread_mutex_init(&schedulingErrorMutex, NULL);
     pthread_cond_init(&updatedCompleteCond, NULL);
     pthread_mutex_init(&updatedCompleteMutex, NULL);
-    pthread_create(&schedulerThread, NULL, rms, NULL);
+    pthread_create(&schedulerThread, NULL, edf, NULL);
 }
 
 /**
@@ -60,6 +61,70 @@ void *rms() {
             Alien *alien = &aliens[idShorterPeriod - 1];
             alien->isActive = 1;
             pthread_mutex_unlock(&aliens_mutex[idShorterPeriod-1]);
+        }
+
+        // Se actualiza el reporte
+        updateReport(fptr);
+
+        // Se espera a que todos los Aliens se actualicen en el siguiente clk
+        pthread_mutex_lock(&updatedCompleteMutex);
+        while (updatedCount < aliensCount) {
+            pthread_cond_wait(&updatedCompleteCond, &updatedCompleteMutex);
+        }
+        updatedCount = 0;
+        pthread_mutex_unlock(&updatedCompleteMutex);
+
+        pthread_mutex_lock(&gameLoopMutex);
+        int loop = gameLoop;
+        pthread_mutex_unlock(&gameLoopMutex);
+    }
+    fclose(fptr);
+}
+
+/**
+ * Funcion que implementa el algoritmo de calendarizacion de procesos EDF
+**/
+void *edf()
+{
+    // Apertura del archivo de reporte
+    FILE *fptr = fopen("report.txt","w");
+
+    pthread_mutex_lock(&gameLoopMutex);
+    int loop = gameLoop;
+    pthread_mutex_unlock(&gameLoopMutex);
+
+    while(loop) {
+        // Se verifica si hay un error de calendarizacion
+        checkSchedulingError();
+
+        pthread_mutex_lock(&alienCountMutex);
+        int aliensCount = alienCount;
+        pthread_mutex_unlock(&alienCountMutex);
+
+        // Variables que almacenan el ID del alien con la menor energia
+        int shorterEnergy = __INT_MAX__;
+        int idShorterEnergy = 0;
+
+        // Se busca el Alien con menor energia y disponible para ejecutarse
+        for (int i = 0; i < aliensCount; i++) {
+            pthread_mutex_lock(&aliens_mutex[i]);
+            Alien *alien = &aliens[i];
+            alien->isActive = 0;
+
+            // Se busca el proceso con mayor prioridad
+            // Se busca Alien no finalizado y con menor energia
+            if(!alien->isFinished && alien->isAvailable && alien->energyCounter < shorterEnergy) {
+                shorterEnergy = alien->energyCounter;
+                idShorterEnergy = alien->id;
+            }
+            pthread_mutex_unlock(&aliens_mutex[i]);
+        }
+        // Se activa el Alien que debe ejecutarse
+        if(idShorterEnergy != 0) {
+            pthread_mutex_lock(&aliens_mutex[idShorterEnergy-1]);
+            Alien *alien = &aliens[idShorterEnergy - 1];
+            alien->isActive = 1;
+            pthread_mutex_unlock(&aliens_mutex[idShorterEnergy-1]);
         }
 
         // Se actualiza el reporte
