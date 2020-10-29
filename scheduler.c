@@ -15,7 +15,9 @@ void scheduler(int algorithm) {
     pthread_mutex_init(&schedulingErrorMutex, NULL);
     pthread_cond_init(&updatedCompleteCond, NULL);
     pthread_mutex_init(&updatedCompleteMutex, NULL);
-    pthread_create(&schedulerThread, NULL, edf, NULL);
+
+    if(algorithm == 1) pthread_create(&schedulerThread, NULL, rms, NULL);
+    else pthread_create(&schedulerThread, NULL, edf, NULL);
 }
 
 /**
