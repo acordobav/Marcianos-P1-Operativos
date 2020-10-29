@@ -214,7 +214,7 @@ int main()
                 case ALLEGRO_KEY_SPACE:
                     //Funcion crear marciano
                     if(energy_alien < regen_alien) {
-                        createAlien(regen_alien, energy_alien);
+                        createAlien(regen_alien, energy_alien, 0);
                         num_alien += 1;
                         energy_alien = 1;
                         regen_alien = 1;

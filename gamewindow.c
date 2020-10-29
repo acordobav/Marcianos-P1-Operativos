@@ -6,7 +6,7 @@
 #include <allegro5/allegro_image.h>
 #include <allegro5/allegro_ttf.h>
 
-#include "scheduler.c"
+#include "reportwindow.c"
 
 #define ScreenWidth 830
 #define ScreenHeight 830 
@@ -47,7 +47,7 @@ Alien* gamewindow(int modeop, int algorithm) {
     ALLEGRO_TIMER* timer = al_create_timer(1.0 / FPS);
     ALLEGRO_EVENT_QUEUE* queue = al_create_event_queue();
     ALLEGRO_DISPLAY* disp = al_create_display(ScreenWidth, ScreenHeight);
-    al_set_window_title(disp, "Proyecto 1 PSO - Simulacion");
+    al_set_window_title(disp, "Simulacion");
     if(modeop == 2) al_resize_display(disp, ScreenWidth, 690);
     ALLEGRO_FONT* font = al_create_builtin_font();
 
@@ -102,7 +102,7 @@ Alien* gamewindow(int modeop, int algorithm) {
                     // Crear nuevo Alien
                     if (modeop == 1) {
                         if(energy_alien < regen_alien) {
-                            createAlien(regen_alien, energy_alien);
+                            createAlien(regen_alien, energy_alien, clk);
                             regen_alien = 1;
                             energy_alien = 1;
                         }
@@ -123,7 +123,7 @@ Alien* gamewindow(int modeop, int algorithm) {
                 executionCounter -= 1;
                 if(executionCounter <= 0) {
                     executionCounter = FPS;
-                    clk++; // Aumentar contador de tiempo
+                    if(alienCount > 0) clk++; // Aumentar contador de tiempo
 
                     //Verificacion de error de calendarizacion
                     pthread_mutex_lock(&schedulingErrorMutex);
@@ -163,7 +163,7 @@ Alien* gamewindow(int modeop, int algorithm) {
     pthread_mutex_lock(&schedulingErrorMutex);
     schError = schedulingError;
     pthread_mutex_unlock(&schedulingErrorMutex);
-    int value = 0;
+    int value = 1;
     if(schError != 0) {
         pthread_mutex_lock(&aliens_mutex[schedulingError-1]);
         Alien alien = aliens[schedulingError-1];
@@ -182,9 +182,7 @@ Alien* gamewindow(int modeop, int algorithm) {
     al_destroy_bitmap(endFlagSprite);
     al_destroy_bitmap(alienSprite);
 
-    free(walls);
-
-    
+    if(value == 1) reportWindow();
 }
 
 /**

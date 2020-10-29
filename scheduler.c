@@ -6,10 +6,12 @@ pthread_t schedulerThread;
 void *rms();
 void *edf();
 void checkSchedulingError();
-void updateReport(FILE *fptr);
+void updateReport();
 
 pthread_mutex_t schedulingErrorMutex;
 int schedulingError = 0;
+int report[2000];
+int reportCount = 0;
 
 void scheduler(int algorithm) {
     pthread_mutex_init(&schedulingErrorMutex, NULL);
@@ -24,9 +26,6 @@ void scheduler(int algorithm) {
  * Funcion que implementa el algoritmo de calendarizacion de procesos RMS
 **/
 void *rms() {
-    // Apertura del archivo de reporte
-    FILE *fptr = fopen("report.txt","w");
-
     pthread_mutex_lock(&gameLoopMutex);
     int loop = gameLoop;
     pthread_mutex_unlock(&gameLoopMutex);
@@ -66,7 +65,7 @@ void *rms() {
         }
 
         // Se actualiza el reporte
-        if (aliensCount > 0) updateReport(fptr);
+        if (aliensCount > 0) updateReport();
 
         // Se espera a que todos los Aliens se actualicen en el siguiente clk
         pthread_mutex_lock(&updatedCompleteMutex);
@@ -80,17 +79,12 @@ void *rms() {
         int loop = gameLoop;
         pthread_mutex_unlock(&gameLoopMutex);
     }
-    fclose(fptr);
 }
 
 /**
  * Funcion que implementa el algoritmo de calendarizacion de procesos EDF
 **/
-void *edf()
-{
-    // Apertura del archivo de reporte
-    FILE *fptr = fopen("report.txt","w");
-
+void *edf() {
     pthread_mutex_lock(&gameLoopMutex);
     int loop = gameLoop;
     pthread_mutex_unlock(&gameLoopMutex);
@@ -130,7 +124,7 @@ void *edf()
         }
 
         // Se actualiza el reporte
-        if (aliensCount > 0) updateReport(fptr);
+        if (aliensCount > 0) updateReport();
 
         // Se espera a que todos los Aliens se actualicen en el siguiente clk
         pthread_mutex_lock(&updatedCompleteMutex);
@@ -144,7 +138,6 @@ void *edf()
         int loop = gameLoop;
         pthread_mutex_unlock(&gameLoopMutex);
     }
-    fclose(fptr);
 }
 
 /**
@@ -175,7 +168,7 @@ void checkSchedulingError() {
 /**
  * Funcion para actualizar el reporte de calendarizacion
 **/
-void updateReport(FILE *fptr) {
+void updateReport() {
     pthread_mutex_lock(&alienCountMutex);
     int aliensCount = alienCount;
     pthread_mutex_unlock(&alienCountMutex);
@@ -191,6 +184,6 @@ void updateReport(FILE *fptr) {
             break;
         }
     }
-    fprintf(fptr, "%d", id); // Escritura del identificador
-    fwrite(" ", 1, 1, fptr); // Escritura de un espacio en blanco
+    report[reportCount] = id;
+    reportCount++;
 }

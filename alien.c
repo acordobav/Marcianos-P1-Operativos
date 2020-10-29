@@ -19,6 +19,7 @@ typedef struct Alien {
     int regenerationTimer;
     int energyCounter;
     int isAvailable;
+    int startTime;
 } Alien;
 
 int alienCount = 0;
@@ -56,7 +57,7 @@ int frameControl = 0;
  * period: Periodo que debe tener el nuevo alien
  * energy: Energia que debe tener el nuevo alien
 **/ 
-int createAlien(int period, int energy) {
+int createAlien(int period, int energy, int startTime) {
     Alien alien;
     alien.id = alienCount+1;// Identificador del alien
     alien.x = flags[0].x;            // Posicion en x del punto de partida
@@ -70,6 +71,7 @@ int createAlien(int period, int energy) {
     alien.regenerationTimer = period; // Contador de tiempo de regeneracion
     alien.energyCounter = energy; // Contador de energia
     alien.isAvailable = 1;
+    alien.startTime = startTime; 
     aliens[alienCount] = alien;
     
     // Creacion de un mutex para el Alien
