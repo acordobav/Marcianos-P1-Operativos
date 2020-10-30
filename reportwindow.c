@@ -68,9 +68,9 @@ void reportWindow() {
                 moveCamera(DOWN);
         } else if(event.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
             break;
-        else if(event.type == ALLEGRO_EVENT_KEY_DOWN) {
+        /*else if(event.type == ALLEGRO_EVENT_KEY_DOWN) {
             if(al_key_down(&keyState, ALLEGRO_KEY_X)) break;
-        }
+        }*/
         // Renderizado de los objetos
         if(redraw && al_is_event_queue_empty(queue))
         {

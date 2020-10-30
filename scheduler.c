@@ -98,8 +98,8 @@ void *edf() {
         pthread_mutex_unlock(&alienCountMutex);
 
         // Variables que almacenan el ID del alien con la menor energia
-        int shorterEnergy = __INT_MAX__;
-        int idShorterEnergy = 0;
+        int shorterDeadline = __INT_MAX__;
+        int idShorterDeadline = 0;
 
         // Se busca el Alien con menor energia y disponible para ejecutarse
         for (int i = 0; i < aliensCount; i++) {
@@ -109,18 +109,18 @@ void *edf() {
 
             // Se busca el proceso con mayor prioridad
             // Se busca Alien no finalizado y con menor energia
-            if(!alien->isFinished && alien->isAvailable && alien->energyCounter < shorterEnergy) {
-                shorterEnergy = alien->energyCounter;
-                idShorterEnergy = alien->id;
+            if(!alien->isFinished && alien->isAvailable && alien->regenerationTimer <= shorterDeadline) {
+                shorterDeadline = alien->regenerationTimer;
+                idShorterDeadline = alien->id;
             }
             pthread_mutex_unlock(&aliens_mutex[i]);
         }
         // Se activa el Alien que debe ejecutarse
-        if(idShorterEnergy != 0) {
-            pthread_mutex_lock(&aliens_mutex[idShorterEnergy-1]);
-            Alien *alien = &aliens[idShorterEnergy - 1];
+        if(idShorterDeadline != 0) {
+            pthread_mutex_lock(&aliens_mutex[idShorterDeadline-1]);
+            Alien *alien = &aliens[idShorterDeadline - 1];
             alien->isActive = 1;
-            pthread_mutex_unlock(&aliens_mutex[idShorterEnergy-1]);
+            pthread_mutex_unlock(&aliens_mutex[idShorterDeadline-1]);
         }
 
         // Se actualiza el reporte
